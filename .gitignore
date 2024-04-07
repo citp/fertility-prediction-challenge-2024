@@ -5,3 +5,8 @@
 .LSOverride
 __pycache__/
 .tool-versions
+PreFer_train_background_data.csv
+PreFer_train_data.csv
+PreFer_train_outcome.csv
+PreFer_train_supplementary_data.csv
+PreFer_train_supplementary_outcome.csv

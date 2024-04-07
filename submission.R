@@ -77,9 +77,11 @@ predict_outcomes <- function(df, background_df = NULL, model_path = "./model.rds
   vars_without_id <- colnames(df)[colnames(df) != "nomem_encr"]
   
   # Generate predictions from model
-  predictions <- predict(model, 
-                         subset(df, select = vars_without_id), 
-                         type = "response") 
+  predictions <- predict(model, subset(df, select = vars_without_id),
+    type = "raw"
+  ) %>%
+    as.numeric()
+  predictions <- predictions - 1
   
   # Create predictions that should be 0s and 1s rather than, e.g., probabilities
   predictions <- ifelse(predictions > 0.5, 1, 0)  
