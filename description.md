@@ -1,3 +1,3 @@
 # Description of submission
 
-Univariate logistic regression
+Univariate logistic regression.
