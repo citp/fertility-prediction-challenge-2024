@@ -6,6 +6,11 @@
 # It is important to document your training steps here, including seed, 
 # number of folds, model, et cetera
 
+# Load packages
+library(dplyr)
+library(tidyr)
+library(tidymodels)
+
 train_save_model <- function(cleaned_df, outcome_df) {
   # Trains a model using the cleaned dataframe and saves the model to a file.
 
@@ -18,37 +23,28 @@ train_save_model <- function(cleaned_df, outcome_df) {
 
   # Combine cleaned_df and outcome_df
   model_df <- merge(cleaned_df, outcome_df, by = "nomem_encr") %>%
-    filter(!is.na(new_child)) %>%
     mutate(new_child = factor(new_child))
 
-  # Given a data frame with two columns "obs" and "pred" featuring observed and
-  # predicted values, this function produces an F1 score. However, if no
-  # positive cases are predicted, F1 will be undefined, so we'll return
-  # recall = 0 as f1 instead. The lev and model arguments are not used here but
-  # placeholders are required so that summaryFunction could work.
-  f1_summary <- function(data, lev = NULL, model = NULL) {
-    f1 <- F1_Score(data$obs, data$pred, positive = "1")
-    if (length(which(data$pred == "1")) == 0) {
-      warning(
-        "No positive cases predicted. Returning recall = 0 as f1 instead."
-      )
-      c(f1 = Recall(data$obs, data$pred, positive = "1"))
-    } else {
-      c(f1 = F1_Score(data$obs, data$pred, positive = "1"))
-    }
-  }
-
-  # Set up cross validation
-  train_control <- trainControl(
-    method = "cv", number = 5,
-    summaryFunction = f1_summary
-  )
-
   # Logistic regression model
-  model <- train(new_child ~ age, model_df,
-    family = "binomial", method = "glm",
-    trControl = train_control, metric = "f1"
-  )
+  model_to_fit <- logistic_reg()
+  
+  # Set up cross validation
+  # v <- 5
+  # test_folds <- vfold_cv(model_df, v = v)
+  # train_folds <- test_folds
+  # test_folds <- map(test_folds$splits, assessment)
+  # train_folds <- map(train_folds$splits, analysis)
+  # map(train_folds, ~ fit(model_to_fit, new_child ~ ., .x)) %>%
+  #   map2(test_folds, predict) %>%
+  #   map2(test_folds, bind_cols) %>%
+  #   map(~ f_meas(.x,
+  #     truth = new_child, estimate = .pred_class,
+  #     event_level = "second"
+  #   )) %>%
+  #   map(~ .x$.estimate) %>%
+  #   mean()
+  
+  model <- fit(model_to_fit, new_child ~ age, model_df)
 
   # Save the model
   saveRDS(model, "model.rds")
