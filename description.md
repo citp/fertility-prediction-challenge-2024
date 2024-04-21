@@ -1,3 +1,3 @@
 # Description of submission
 
-Univariate logistic regression.
+Logistic regression with 62 hand-picked variables.

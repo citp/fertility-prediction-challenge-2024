@@ -18,11 +18,11 @@ train_save_model <- function(cleaned_df, outcome_df) {
   # cleaned_df (dataframe): The cleaned data from clean_df function to be used for training the model.
   # outcome_df (dataframe): The data with the outcome variable (e.g., from PreFer_train_outcome.csv or PreFer_fake_outcome.csv).
 
-  ## This script contains a bare minimum working example
-  set.seed(1) # not useful here because logistic regression deterministic
+  set.seed(1)
 
   # Combine cleaned_df and outcome_df
   model_df <- merge(cleaned_df, outcome_df, by = "nomem_encr") %>%
+    select(-nomem_encr, -outcome_available) %>% 
     mutate(new_child = factor(new_child))
 
   # Logistic regression model
@@ -41,10 +41,10 @@ train_save_model <- function(cleaned_df, outcome_df) {
   #     truth = new_child, estimate = .pred_class,
   #     event_level = "second"
   #   )) %>%
-  #   map(~ .x$.estimate) %>%
+  #   map_dbl(~ .x$.estimate) %>%
   #   mean()
   
-  model <- fit(model_to_fit, new_child ~ age, model_df)
+  model <- fit(model_to_fit, new_child ~ ., model_df)
 
   # Save the model
   saveRDS(model, "model.rds")
