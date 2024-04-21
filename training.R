@@ -23,11 +23,13 @@ train_save_model <- function(cleaned_df, outcome_df) {
   # Combine cleaned_df and outcome_df
   model_df <- merge(cleaned_df, outcome_df, by = "nomem_encr") %>%
     select(-nomem_encr, -outcome_available) %>% 
-    mutate(new_child = factor(new_child))
-
-  # Logistic regression model
-  model_to_fit <- logistic_reg()
+    mutate_all(as.numeric) %>% 
+    mutate(new_child = factor(new_child)) 
   
+  # Mean impute everything
+  recipe <- recipe(new_child ~ ., model_df) %>%
+    step_impute_mean(everything(), -contains("new_child"))
+
   # Set up cross validation
   # v <- 5
   # test_folds <- vfold_cv(model_df, v = v)
@@ -44,8 +46,12 @@ train_save_model <- function(cleaned_df, outcome_df) {
   #   map_dbl(~ .x$.estimate) %>%
   #   mean()
   
-  model <- fit(model_to_fit, new_child ~ ., model_df)
-
+  # Logistic regression model
+  model <- workflow() %>% 
+    add_model(logistic_reg()) %>% 
+    add_recipe(recipe) %>% 
+    fit(data = model_df)
+  
   # Save the model
   saveRDS(model, "model.rds")
 }
