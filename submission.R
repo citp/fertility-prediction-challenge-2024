@@ -99,13 +99,8 @@ clean_df <- function(df, background_df = NULL){
   ## Keeping data with variables selected
   df <- df[ , keepcols ]
   
-  df <- filter(df, outcome_available == 1) %>% 
-    # Mean impute everything
-    mutate_all(as.numeric) %>% 
-    recipe(. ~ ., .) %>%
-    step_impute_mean(everything()) %>%
-    prep() %>%
-    bake(new_data = NULL)
+  ## Keep only rows with available outcomes
+  df <- filter(df, outcome_available == 1)
 
   return(df)
 }
@@ -146,7 +141,8 @@ predict_outcomes <- function(df, background_df = NULL, model_path = "./model.rds
   
   # Generate predictions from model
   predictions <- predict(model, 
-                         subset(df, select = vars_without_id)) 
+                         subset(df, select = vars_without_id)) %>% 
+    mutate_all(~ as.numeric(.x) - 1)
   
   # Create predictions that should be 0s and 1s rather than, e.g., probabilities
   predictions <- ifelse(predictions > 0.5, 1, 0)  
