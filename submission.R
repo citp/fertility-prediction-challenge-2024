@@ -29,17 +29,83 @@ clean_df <- function(df, background_df = NULL){
   # Returns:
   # data frame: The cleaned dataframe with only the necessary columns and processed variables.
 
-  ## This script contains a bare minimum working example
-  # Create new age variable
-  df$age <- 2024 - df$birthyear_bg
-
   # Selecting variables for modelling
 
-  keepcols = c('nomem_encr', # ID variable required for predictions,
-               'age')        # newly created variable
+  keepcols = c("nomem_encr", # ID variable required for predictions,
+               "outcome_available", # Is there an outcome to predict?
+               "cf20m024",
+               "cf20m025",
+               "cf20m030",
+               "cf20m031",
+               "cf20m129",
+               "cf20m130",
+               "cf20m166",
+               "cf20m454",
+               "cf20m455",
+               "cf20m513",
+               "cf20m514",
+               "cf20m515",
+               "cf20m516",
+               "cf20m517",
+               "cf20m518",
+               "cf20m519",
+               "cf20m520",
+               "cf20m521",
+               "ca20g012",
+               "ca20g013",
+               "cv20l109",
+               "cv20l110",
+               "cv20l111",
+               "cv20l112",
+               "cv20l113",
+               "cv20l114",
+               "cv20l115",
+               "cv20l124",
+               "cv20l125",
+               "cv20l126",
+               "cv20l127",
+               "cv20l128",
+               "cv20l129",
+               "cv20l130",
+               "cv10c135",
+               "cv10c136",
+               "cv10c137",
+               "cv10c138",
+               "cv20l143",
+               "cv20l144",
+               "cv20l145",
+               "cv20l151",
+               "cv20l152",
+               "cv20l153",
+               "cv20l154",
+               "cr18k101",
+               "cr18k102",
+               "cr18k103",
+               "cr18k104",
+               "cr18k105",
+               "cr20m162",
+               "cw20m440",
+               "cw20m529",
+               "cw20m587",
+               "cw20m592",
+               "birthyear_bg",
+               "gender_bg",
+               "migration_background_bg",
+               "nettohh_f_2020",
+               "oplmet_2020",
+               "sted_2020",
+               "woning_2020")
   
   ## Keeping data with variables selected
   df <- df[ , keepcols ]
+  
+  df <- filter(df, outcome_available == 1) %>% 
+    # Mean impute everything
+    mutate_all(as.numeric) %>% 
+    recipe(. ~ ., .) %>%
+    step_impute_mean(everything()) %>%
+    prep() %>%
+    bake(new_data = NULL)
 
   return(df)
 }
@@ -64,7 +130,7 @@ predict_outcomes <- function(df, background_df = NULL, model_path = "./model.rds
   # Returns:
   # dataframe: A dataframe containing the identifiers and their corresponding predictions.
   
-  ## This script contains a bare minimum working example
+  # Test for presence of nomem_encr
   if( !("nomem_encr" %in% colnames(df)) ) {
     warning("The identifier variable 'nomem_encr' should be in the dataset")
   }
