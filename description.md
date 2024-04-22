@@ -1,3 +1,3 @@
 # Description of submission
 
-Logistic regression with 62 hand-picked variables.
+xgboost with 61 hand-picked variables, which are converted to 36 predictors.
