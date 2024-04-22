@@ -17,8 +17,9 @@
 library(dplyr)
 library(tidyr)
 library(tidymodels)
+library(xgboost)
 
-clean_df <- function(df, background_df = NULL){
+clean_df <- function(df, background_df = NULL) {
   # Preprocess the input dataframe to feed the model.
   ### If no cleaning is done (e.g. if all the cleaning is done in a pipeline) leave only the "return df" command
 
@@ -31,76 +32,197 @@ clean_df <- function(df, background_df = NULL){
 
   # Selecting variables for modelling
 
-  keepcols = c("nomem_encr", # ID variable required for predictions,
-               "outcome_available", # Is there an outcome to predict?
-               "cf20m024",
-               "cf20m025",
-               "cf20m030",
-               "cf20m031",
-               "cf20m129",
-               "cf20m130",
-               "cf20m166",
-               "cf20m454",
-               "cf20m455",
-               "cf20m513",
-               "cf20m514",
-               "cf20m515",
-               "cf20m516",
-               "cf20m517",
-               "cf20m518",
-               "cf20m519",
-               "cf20m520",
-               "cf20m521",
-               "ca20g012",
-               "ca20g013",
-               "cv20l109",
-               "cv20l110",
-               "cv20l111",
-               "cv20l112",
-               "cv20l113",
-               "cv20l114",
-               "cv20l115",
-               "cv20l124",
-               "cv20l125",
-               "cv20l126",
-               "cv20l127",
-               "cv20l128",
-               "cv20l129",
-               "cv20l130",
-               "cv10c135",
-               "cv10c136",
-               "cv10c137",
-               "cv10c138",
-               "cv20l143",
-               "cv20l144",
-               "cv20l145",
-               "cv20l151",
-               "cv20l152",
-               "cv20l153",
-               "cv20l154",
-               "cr18k101",
-               "cr18k102",
-               "cr18k103",
-               "cr18k104",
-               "cr18k105",
-               "cr20m162",
-               "cw20m440",
-               "cw20m529",
-               "cw20m587",
-               "cw20m592",
-               "birthyear_bg",
-               "gender_bg",
-               "migration_background_bg",
-               "nettohh_f_2020",
-               "oplmet_2020",
-               "sted_2020",
-               "woning_2020")
-  
+  keepcols <- c(
+    "nomem_encr", # ID variable required for predictions,
+    "outcome_available", # Is there an outcome to predict?
+    # Partnership status
+    "cf20m024", "cf20m025", "cf20m030", "cf20m031",
+    # Expected kids
+    "cf20m128", "cf20m129", "cf20m130",
+    # Feelings about being single
+    "cf20m166",
+    # Existing children
+    "cf20m454", "cf20m455",
+    # Relationship with child
+    "cf20m513",
+    "cf20m514",
+    "cf20m515",
+    "cf20m516",
+    "cf20m517",
+    "cf20m518",
+    "cf20m519",
+    "cf20m520",
+    "cf20m521",
+    # Savings
+    "ca20g012", "ca20g013", "ca20g078",
+    # Traditional motherhood
+    "cv20l109", "cv20l110", "cv20l111",
+    # Traditional fatherhood
+    "cv20l112", "cv20l113", "cv20l114", "cv20l115",
+    # Traditional marriage
+    "cv20l124",
+    "cv20l125",
+    "cv20l126",
+    "cv20l127",
+    "cv20l128",
+    "cv20l129",
+    "cv20l130",
+    # Traditional fertility
+    "cv10c135", "cv10c136", "cv10c137", "cv10c138",
+    # Against working mothers
+    "cv20l143", "cv20l144", "cv20l145", "cv20l146",
+    # Sexism
+    "cv20l151", "cv20l152", "cv20l153", "cv20l154",
+    # Gendered religiosity
+    "cr18k101", "cr18k102", "cr18k103", "cr18k104", "cr18k105",
+    # Religiosity
+    "cr20m162",
+    # Birth year
+    "birthyear_bg",
+    # Gender
+    "gender_bg",
+    # Origins
+    "migration_background_bg",
+    # Houshold Income
+    "nettohh_f_2020",
+    # Education
+    "oplmet_2020",
+    # Urban
+    "sted_2020",
+    # Dwelling type
+    "woning_2020"
+  )
+
   ## Keeping data with variables selected
-  df <- df[ , keepcols ]
-  
+  df <- df[, keepcols]
+
   ## Keep only rows with available outcomes
-  df <- filter(df, outcome_available == 1)
+  df <- filter(df, outcome_available == 1) %>%
+    rowwise() %>%
+    mutate(# If no partner, then one is not living together with partner
+      cf20m025 = ifelse(cf20m024 == 2, 2, cf20m025),
+      # If no partner, then one is not married to partner
+      cf20m030 = ifelse(cf20m024 == 2, 2, cf20m030),
+      # If no expected kids, then expected number of kids is 0
+      cf20m129 = ifelse(cf20m128 == 2, 0, cf20m129),
+      # If no expected kids, then a lower-bound estimate for the number of
+      # years within which to have kids is 31,
+      cf20m130 = case_when(cf20m128 == 2 ~ 31,
+        cf20m130 == 2025 ~ 5,
+        TRUE ~ cf20m130
+      ),
+      # If one never had children, then one does not have any living children
+      cf20m455 = ifelse(cf20m454 == 2, 0, cf20m455),
+      # Scale for feeling towards child
+      across(c(cf20m515, cf20m516, cf20m518, cf20m519, cf20m520, cf20m521),
+        ~ 8 - .x
+      ),
+      child_feeling = mean(
+        c(cf20m513,
+          cf20m514,
+          cf20m515,
+          cf20m516,
+          cf20m517,
+          cf20m518,
+          cf20m519,
+          cf20m520,
+          cf20m521
+        ),
+        na.rm = TRUE
+      ),
+      # Impute savings with range midpoints. Two exceptions: We impute -1200
+      # for those in the smallest category. -1200 is roughly the average
+      # savings of those who are in that category. Similarly we impute 62500
+      # for those in the largest category.
+      # Also, if one does not have accounts, then one does not have any savings
+      ca20g012 = case_when(ca20g078 == 0 ~ 0,
+        ca20g013 == 1 ~ -1200,
+        ca20g013 == 2 ~ 150,
+        ca20g013 == 3 ~ 375,
+        ca20g013 == 4 ~ 625,
+        ca20g013 == 5 ~ 875,
+        ca20g013 == 6 ~ 1750,
+        ca20g013 == 7 ~ 3750,
+        ca20g013 == 8 ~ 6250,
+        ca20g013 == 9 ~ 8750,
+        ca20g013 == 10 ~ 10750,
+        ca20g013 == 11 ~ 12750,
+        ca20g013 == 12 ~ 15500,
+        ca20g013 == 13 ~ 18500,
+        ca20g013 == 14 ~ 22500,
+        ca20g013 == 15 ~ 62500,
+        ca20g012 < -9999999997 ~ NA,
+        TRUE ~ ca20g012
+      ),
+      # Scale on traditional motherhood
+      cv20l109 = 6 - cv20l109,
+      traditional_motherhood = mean(c(cv20l109, cv20l110, cv20l111),
+        na.rm = TRUE
+      ),
+      # Scale on traditional fatherhood
+      across(c(cv20l112, cv20l114, cv20l115), ~ 6 - .x),
+      traditional_fatherhood = mean(c(cv20l112, cv20l113, cv20l114, cv20l115),
+        na.rm = TRUE
+      ),
+      # Scale on traditional marriage
+      across(c(cv20l126, cv20l127, cv20l128, cv20l129, cv20l130), ~ 6 - .x),
+      traditional_marriage = mean(
+        c(cv20l124, cv20l125, cv20l126, cv20l127, cv20l128, cv20l129, cv20l130
+        ),
+        na.rm = TRUE
+      ),
+      # Scale on traditional fertility
+      traditional_fertility = mean(c(cv10c135, cv10c136, cv10c137, cv10c138),
+        na.rm = TRUE
+      ),
+      # Scale on being against working mothers
+      working_mother = mean(c(cv20l143, cv20l144, cv20l145, cv20l146),
+        na.rm = TRUE
+      ),
+      # Scale on sexism
+      sexism = mean(c(cv20l151, cv20l152, cv20l153, cv20l154), na.rm = TRUE),
+      # Scale on gendered religiosity
+      across(
+        c(cr18k101, cr18k102, cr18k103, cr18k104, cr18k105),
+        ~ case_when(.x == 1 ~ 3, .x == 2 ~ 1, .x > 2 ~ 2)
+      ),
+      across(c(cr18k102, cr18k105), ~ 4 - .x),
+      gendered_religiosity = mean(
+        c(cr18k101, cr18k102, cr18k103, cr18k104, cr18k105),
+        na.rm = TRUE
+      ),
+    ) %>%
+    select(-outcome_available,
+      -cf20m128,
+      -cf20m454,
+      -cf20m513,
+      -cf20m514,
+      -cf20m515,
+      -cf20m516,
+      -cf20m517,
+      -cf20m518,
+      -cf20m519,
+      -cf20m520,
+      -cf20m521,
+      -ca20g078, -ca20g013,
+      -cv20l109, -cv20l110, -cv20l111,
+      -cv20l112, -cv20l113, -cv20l114, -cv20l115,
+      -cv20l124,
+      -cv20l125,
+      -cv20l126,
+      -cv20l127,
+      -cv20l128,
+      -cv20l129,
+      -cv20l130,
+      -cv10c135, -cv10c136, -cv10c137, -cv10c138,
+      -cv20l143, -cv20l144, -cv20l145, -cv20l146,
+      -cv20l151, -cv20l152, -cv20l153, -cv20l154,
+      -cr18k101, -cr18k102, -cr18k103, -cr18k104, -cr18k105
+    ) %>%
+    mutate(
+      across(everything(), as.numeric),
+      across(c(migration_background_bg, oplmet_2020, woning_2020), factor)
+    )
 
   return(df)
 }
@@ -135,14 +257,14 @@ predict_outcomes <- function(df, background_df = NULL, model_path = "./model.rds
     
   # Preprocess the fake / holdout data
   df <- clean_df(df, background_df)
-
+  
   # Exclude the variable nomem_encr if this variable is NOT in your model
   vars_without_id <- colnames(df)[colnames(df) != "nomem_encr"]
   
   # Generate predictions from model
   predictions <- predict(model, 
                          subset(df, select = vars_without_id)) %>% 
-    mutate_all(~ as.numeric(.x) - 1)
+    mutate(across(.pred_class, ~ as.numeric(.x) - 1))
   
   # Create predictions that should be 0s and 1s rather than, e.g., probabilities
   predictions <- ifelse(predictions > 0.5, 1, 0)  

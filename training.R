@@ -10,6 +10,7 @@
 library(dplyr)
 library(tidyr)
 library(tidymodels)
+library(xgboost)
 
 train_save_model <- function(cleaned_df, outcome_df) {
   # Trains a model using the cleaned dataframe and saves the model to a file.
@@ -22,36 +23,49 @@ train_save_model <- function(cleaned_df, outcome_df) {
 
   # Combine cleaned_df and outcome_df
   model_df <- merge(cleaned_df, outcome_df, by = "nomem_encr") %>%
-    select(-nomem_encr, -outcome_available) %>% 
-    mutate_all(as.numeric) %>% 
-    mutate(new_child = factor(new_child)) 
-  
-  # Mean impute everything
-  recipe <- recipe(new_child ~ ., model_df) %>%
-    step_impute_mean(everything(), -contains("new_child"))
+    select(-nomem_encr) %>%
+    mutate(new_child = factor(new_child))
 
-  # Set up cross validation
-  # v <- 5
-  # test_folds <- vfold_cv(model_df, v = v)
-  # train_folds <- test_folds
-  # test_folds <- map(test_folds$splits, assessment)
-  # train_folds <- map(train_folds$splits, analysis)
-  # map(train_folds, ~ fit(model_to_fit, new_child ~ ., .x)) %>%
-  #   map2(test_folds, predict) %>%
-  #   map2(test_folds, bind_cols) %>%
-  #   map(~ f_meas(.x,
-  #     truth = new_child, estimate = .pred_class,
-  #     event_level = "second"
-  #   )) %>%
-  #   map_dbl(~ .x$.estimate) %>%
-  #   mean()
-  
-  # Logistic regression model
-  model <- workflow() %>% 
-    add_model(logistic_reg()) %>% 
-    add_recipe(recipe) %>% 
-    fit(data = model_df)
-  
+  # Dummy-encode the categorical variables and mean impute everything
+  recipe <- recipe(new_child ~ ., model_df) %>%
+    step_dummy(migration_background_bg, oplmet_2020, woning_2020) %>%
+    step_impute_mean(everything(), -new_child)
+
+  # Tune an xgboost model using grid search and cross validation
+  model_to_tune <- boost_tree(
+    mode = "classification",
+    mtry = tune(), trees = tune(), tree_depth = tune(), learn_rate = tune()
+  ) %>%
+    set_engine("xgboost", counts = FALSE)
+  folds <- vfold_cv(model_df, v = 5)
+  grid <- expand.grid(
+    mtry = c(0.05, 0.1, 0.2, 0.4, 0.8, 1.0),
+    trees = c(10, 50, 100, 200),
+    tree_depth = 1:6,
+    learn_rate = c(0.001, 0.01, 0.1, 1, 10)
+  )
+  best <- tune_grid(model_to_tune, recipe, folds,
+    grid = grid,
+    metrics =
+      metric_set(metric_tweak("f_meas", f_meas, event_level = "second"))
+  ) %>%
+    collect_metrics() %>%
+    filter(n == 5) %>%
+    arrange(desc(mean)) %>%
+    head(1)
+  model <- boost_tree(
+    mode = "classification",
+    mtry = best$mtry,
+    trees = best$trees,
+    tree_depth = best$tree_depth,
+    learn_rate = best$learn_rate
+  ) %>%
+    set_engine("xgboost", counts = FALSE)
+  model <- workflow() %>%
+    add_model(model) %>%
+    add_recipe(recipe) %>%
+    fit(model_df)
+
   # Save the model
   saveRDS(model, "model.rds")
 }
