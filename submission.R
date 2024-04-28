@@ -35,8 +35,13 @@ clean_df <- function(df, background_df = NULL) {
   keepcols <- c(
     "nomem_encr", # ID variable required for predictions,
     "outcome_available", # Is there an outcome to predict?
-    # Partnership status
-    "cf20m024", "cf20m025", "cf20m030", "cf20m031",
+    # Savings
+    "ca20g012", "ca20g013", "ca20g078",
+    # Number of rooms
+    "cd20m034",
+    # Partnership status. We thank Sayash Kapoor and Benedikt Strobl's L1
+    # regression for directing our attention towards cf20m029
+    "cf20m024", "cf20m025", "cf20m026", "cf20m029", "cf20m030",
     # Expected kids
     "cf20m128", "cf20m129", "cf20m130",
     # Feelings about being single
@@ -53,8 +58,17 @@ clean_df <- function(df, background_df = NULL) {
     "cf20m519",
     "cf20m520",
     "cf20m521",
-    # Savings
-    "ca20g012", "ca20g013", "ca20g078",
+    # Health
+    "ch20m004",
+    # Gynaecologist. We thank Sayash Kapoor and Benedikt Strobl's L1
+    # regression for directing our attention towards this variable
+    "ch20m219",
+    # Gendered religiosity
+    "cr18k101", "cr18k102", "cr18k103", "cr18k104", "cr18k105",
+    # Religiosity
+    "cr20m162",
+    # Traditional fertility
+    "cv10c135", "cv10c136", "cv10c137", "cv10c138",
     # Traditional motherhood
     "cv20l109", "cv20l110", "cv20l111",
     # Traditional fatherhood
@@ -67,18 +81,15 @@ clean_df <- function(df, background_df = NULL) {
     "cv20l128",
     "cv20l129",
     "cv20l130",
-    # Traditional fertility
-    "cv10c135", "cv10c136", "cv10c137", "cv10c138",
     # Against working mothers
     "cv20l143", "cv20l144", "cv20l145", "cv20l146",
     # Sexism
     "cv20l151", "cv20l152", "cv20l153", "cv20l154",
-    # Gendered religiosity
-    "cr18k101", "cr18k102", "cr18k103", "cr18k104", "cr18k105",
-    # Religiosity
-    "cr20m162",
     # Birth year
     "birthyear_bg",
+    # Primary occupation. We thank Sayash Kapoor and Benedikt Strobl's L1
+    # regression for directing our attention towards this variable
+    "belbezig_2020",
     # Gender
     "gender_bg",
     # Origins
@@ -99,7 +110,33 @@ clean_df <- function(df, background_df = NULL) {
   ## Keep only rows with available outcomes
   df <- filter(df, outcome_available == 1) %>%
     rowwise() %>%
-    mutate(# If no partner, then one is not living together with partner
+    mutate(
+      # Impute savings with range midpoints. Two exceptions: We impute -1200
+      # for those in the smallest category. -1200 is roughly the average
+      # savings of those who are in that category. Similarly we impute 62500
+      # for those in the largest category.
+      # Also, if one does not have accounts, then one does not have any savings
+      ca20g012 = case_when(ca20g078 == 0 ~ 0,
+                           ca20g013 == 1 ~ -1200,
+                           ca20g013 == 2 ~ 150,
+                           ca20g013 == 3 ~ 375,
+                           ca20g013 == 4 ~ 625,
+                           ca20g013 == 5 ~ 875,
+                           ca20g013 == 6 ~ 1750,
+                           ca20g013 == 7 ~ 3750,
+                           ca20g013 == 8 ~ 6250,
+                           ca20g013 == 9 ~ 8750,
+                           ca20g013 == 10 ~ 10750,
+                           ca20g013 == 11 ~ 12750,
+                           ca20g013 == 12 ~ 15500,
+                           ca20g013 == 13 ~ 18500,
+                           ca20g013 == 14 ~ 22500,
+                           ca20g013 == 15 ~ 62500,
+                           ca20g013 == 999 ~ NA,
+                           ca20g012 < -9999999997 ~ NA,
+                           TRUE ~ ca20g012
+      ),
+      # If no partner, then one is not living together with partner
       cf20m025 = ifelse(cf20m024 == 2, 2, cf20m025),
       # If no partner, then one is not married to partner
       cf20m030 = ifelse(cf20m024 == 2, 2, cf20m030),
@@ -111,14 +148,15 @@ clean_df <- function(df, background_df = NULL) {
         cf20m130 == 2025 ~ 5,
         TRUE ~ cf20m130
       ),
+      # Feeling about being single
+      cf20m166 = ifelse(cf20m166 == 99, NA, cf20m166),
       # If one never had children, then one does not have any living children
       cf20m455 = ifelse(cf20m454 == 2, 0, cf20m455),
       # Scale for feeling towards child
       across(c(cf20m515, cf20m516, cf20m518, cf20m519, cf20m520, cf20m521),
         ~ 8 - .x
       ),
-      child_feeling = mean(
-        c(cf20m513,
+      child_feeling = mean(c(cf20m513,
           cf20m514,
           cf20m515,
           cf20m516,
@@ -130,29 +168,20 @@ clean_df <- function(df, background_df = NULL) {
         ),
         na.rm = TRUE
       ),
-      # Impute savings with range midpoints. Two exceptions: We impute -1200
-      # for those in the smallest category. -1200 is roughly the average
-      # savings of those who are in that category. Similarly we impute 62500
-      # for those in the largest category.
-      # Also, if one does not have accounts, then one does not have any savings
-      ca20g012 = case_when(ca20g078 == 0 ~ 0,
-        ca20g013 == 1 ~ -1200,
-        ca20g013 == 2 ~ 150,
-        ca20g013 == 3 ~ 375,
-        ca20g013 == 4 ~ 625,
-        ca20g013 == 5 ~ 875,
-        ca20g013 == 6 ~ 1750,
-        ca20g013 == 7 ~ 3750,
-        ca20g013 == 8 ~ 6250,
-        ca20g013 == 9 ~ 8750,
-        ca20g013 == 10 ~ 10750,
-        ca20g013 == 11 ~ 12750,
-        ca20g013 == 12 ~ 15500,
-        ca20g013 == 13 ~ 18500,
-        ca20g013 == 14 ~ 22500,
-        ca20g013 == 15 ~ 62500,
-        ca20g012 < -9999999997 ~ NA,
-        TRUE ~ ca20g012
+      # Scale on gendered religiosity
+      across(c(cr18k101, cr18k102, cr18k103, cr18k104, cr18k105),
+        ~ case_when(.x == 1 ~ 3, .x == 2 ~ 1, .x > 2 ~ 2)
+      ),
+      across(c(cr18k102, cr18k105), ~ 4 - .x),
+      gendered_religiosity = mean(
+        c(cr18k101, cr18k102, cr18k103, cr18k104, cr18k105),
+        na.rm = TRUE
+      ),
+      # Religiosity
+      cr20m162 = ifelse(cr20m162 == -9, NA, cr20m162),
+      # Scale on traditional fertility
+      traditional_fertility = mean(c(cv10c135, cv10c136, cv10c137, cv10c138),
+                                   na.rm = TRUE
       ),
       # Scale on traditional motherhood
       cv20l109 = 6 - cv20l109,
@@ -171,28 +200,32 @@ clean_df <- function(df, background_df = NULL) {
         ),
         na.rm = TRUE
       ),
-      # Scale on traditional fertility
-      traditional_fertility = mean(c(cv10c135, cv10c136, cv10c137, cv10c138),
-        na.rm = TRUE
-      ),
       # Scale on being against working mothers
       working_mother = mean(c(cv20l143, cv20l144, cv20l145, cv20l146),
         na.rm = TRUE
       ),
       # Scale on sexism
       sexism = mean(c(cv20l151, cv20l152, cv20l153, cv20l154), na.rm = TRUE),
-      # Scale on gendered religiosity
-      across(
-        c(cr18k101, cr18k102, cr18k103, cr18k104, cr18k105),
-        ~ case_when(.x == 1 ~ 3, .x == 2 ~ 1, .x > 2 ~ 2)
-      ),
-      across(c(cr18k102, cr18k105), ~ 4 - .x),
-      gendered_religiosity = mean(
-        c(cr18k101, cr18k102, cr18k103, cr18k104, cr18k105),
-        na.rm = TRUE
-      ),
+      # Primary occupation
+      employee = ifelse(belbezig_2020 == 1, 1, 0),
+      freelance = ifelse(belbezig_2020 == 3, 1, 0),
+      student = ifelse(belbezig_2020 == 7, 1, 0),
+      homemaker = ifelse(belbezig_2020 == 8, 1, 0),
+      # Distinguish first- and second- non-Western migrants from others
+      migration_background_bg = 
+        case_when(migration_background_bg %in% c(0, 101, 201) ~ 1,
+                  migration_background_bg %in% c(102, 202) ~ 0),
+      # Combine the lowest levels of education
+      oplmet_2020 = case_when(oplmet_2020 %in% c(1, 2, 8, 9) ~ 2,
+                              oplmet_2020 == 7 ~ NA,
+                              TRUE ~ oplmet_2020),
+      # Distinguish between home owners and non-home owners
+      woning_2020 = case_when(woning_2020 == 1 ~ 1,
+                              woning_2020 == 0 ~ NA,
+                              TRUE ~ 0)
     ) %>%
     select(-outcome_available,
+      -ca20g078, -ca20g013,
       -cf20m128,
       -cf20m454,
       -cf20m513,
@@ -204,7 +237,8 @@ clean_df <- function(df, background_df = NULL) {
       -cf20m519,
       -cf20m520,
       -cf20m521,
-      -ca20g078, -ca20g013,
+      -cr18k101, -cr18k102, -cr18k103, -cr18k104, -cr18k105,
+      -cv10c135, -cv10c136, -cv10c137, -cv10c138,
       -cv20l109, -cv20l110, -cv20l111,
       -cv20l112, -cv20l113, -cv20l114, -cv20l115,
       -cv20l124,
@@ -214,15 +248,12 @@ clean_df <- function(df, background_df = NULL) {
       -cv20l128,
       -cv20l129,
       -cv20l130,
-      -cv10c135, -cv10c136, -cv10c137, -cv10c138,
       -cv20l143, -cv20l144, -cv20l145, -cv20l146,
       -cv20l151, -cv20l152, -cv20l153, -cv20l154,
-      -cr18k101, -cr18k102, -cr18k103, -cr18k104, -cr18k105
+      -belbezig_2020,
+      -migration_background_bg
     ) %>%
-    mutate(
-      across(everything(), as.numeric),
-      across(c(migration_background_bg, oplmet_2020, woning_2020), factor)
-    )
+    mutate(across(everything(), as.numeric), across(oplmet_2020, factor))
 
   return(df)
 }

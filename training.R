@@ -18,8 +18,7 @@ train_save_model <- function(cleaned_df, outcome_df) {
   # Parameters:
   # cleaned_df (dataframe): The cleaned data from clean_df function to be used for training the model.
   # outcome_df (dataframe): The data with the outcome variable (e.g., from PreFer_train_outcome.csv or PreFer_fake_outcome.csv).
-
-  set.seed(1)
+  set.seed(0)
 
   # Combine cleaned_df and outcome_df
   model_df <- merge(cleaned_df, outcome_df, by = "nomem_encr") %>%
@@ -28,7 +27,7 @@ train_save_model <- function(cleaned_df, outcome_df) {
 
   # Dummy-encode the categorical variables and mean impute everything
   recipe <- recipe(new_child ~ ., model_df) %>%
-    step_dummy(migration_background_bg, oplmet_2020, woning_2020) %>%
+    step_dummy(oplmet_2020, one_hot = TRUE) %>%
     step_impute_mean(everything(), -new_child)
 
   # Tune an xgboost model using grid search and cross validation
@@ -39,10 +38,10 @@ train_save_model <- function(cleaned_df, outcome_df) {
     set_engine("xgboost", counts = FALSE)
   folds <- vfold_cv(model_df, v = 5)
   grid <- expand.grid(
-    mtry = c(0.05, 0.1, 0.2, 0.4, 0.8, 1.0),
-    trees = c(10, 50, 100, 200),
-    tree_depth = 1:6,
-    learn_rate = c(0.001, 0.01, 0.1, 1, 10)
+    mtry = c(.05, .1, .15, .2, .25, .3, .35, .4),
+    trees = c(10, 50, 100, 300, 600, 900, 1200),
+    tree_depth = 3:7,
+    learn_rate = c(.1, .3, .5, .7, .9, 1.1)
   )
   best <- tune_grid(model_to_tune, recipe, folds,
     grid = grid,
