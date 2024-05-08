@@ -30,11 +30,20 @@ clean_df <- function(df, background_df = NULL) {
   # Returns:
   # data frame: The cleaned dataframe with only the necessary columns and processed variables.
 
+  # TIME-SHIFTED DATA INDICATOR
+  # The time shifted data already has a column called time_shifted_data, where
+  # time_shifted_data = 1. For the regular data, we need to create time_shifted_data = 0. 
+  if (!"time_shifted_data" %in% colnames(df)) {
+    df <- df %>% 
+      mutate(time_shifted_data = 0)
+  }
+  
   # Selecting variables for modelling
 
   keepcols <- c(
     "nomem_encr", # ID variable required for predictions,
     "outcome_available", # Is there an outcome to predict?
+    "time_shifted_data", # Indicates whether this is original data or time-shifted data
     # Savings
     "ca20g012", "ca20g013", "ca20g078",
     # Number of rooms
@@ -308,3 +317,4 @@ predict_outcomes <- function(df, background_df = NULL, model_path = "./model.rds
   # Return only dataset with predictions and identifier
   return( df_predict )
 }
+
