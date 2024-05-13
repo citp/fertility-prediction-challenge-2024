@@ -10,3 +10,5 @@ PreFer_train_data.csv
 PreFer_train_outcome.csv
 PreFer_train_supplementary_data.csv
 PreFer_train_supplementary_outcome.csv
+outcome_2018to2020.csv
+train_data_for_2018to2020.csv

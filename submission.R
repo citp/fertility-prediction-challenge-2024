@@ -32,16 +32,15 @@ clean_df <- function(df, background_df = NULL) {
 
   # TIME-SHIFTED DATA INDICATOR
   # The time shifted data already has a column called time_shifted_data, where
-  # time_shifted_data = 1. For the regular data, we need to create time_shifted_data = 0. 
+  # time_shifted_data = 1. For the regular data, we need to create time_shifted_data = 0.
   if (!"time_shifted_data" %in% colnames(df)) {
-    df <- df %>% 
+    df <- df %>%
       mutate(time_shifted_data = 0)
   }
-  
+
   # Selecting variables for modelling
 
-  keepcols <- c(
-    "nomem_encr", # ID variable required for predictions,
+  keepcols <- c("nomem_encr", # ID variable required for predictions,
     "outcome_available", # Is there an outcome to predict?
     "time_shifted_data", # Indicates whether this is original data or time-shifted data
     # Savings
@@ -126,24 +125,24 @@ clean_df <- function(df, background_df = NULL) {
       # for those in the largest category.
       # Also, if one does not have accounts, then one does not have any savings
       ca20g012 = case_when(ca20g078 == 0 ~ 0,
-                           ca20g013 == 1 ~ -1200,
-                           ca20g013 == 2 ~ 150,
-                           ca20g013 == 3 ~ 375,
-                           ca20g013 == 4 ~ 625,
-                           ca20g013 == 5 ~ 875,
-                           ca20g013 == 6 ~ 1750,
-                           ca20g013 == 7 ~ 3750,
-                           ca20g013 == 8 ~ 6250,
-                           ca20g013 == 9 ~ 8750,
-                           ca20g013 == 10 ~ 10750,
-                           ca20g013 == 11 ~ 12750,
-                           ca20g013 == 12 ~ 15500,
-                           ca20g013 == 13 ~ 18500,
-                           ca20g013 == 14 ~ 22500,
-                           ca20g013 == 15 ~ 62500,
-                           ca20g013 == 999 ~ NA,
-                           ca20g012 < -9999999997 ~ NA,
-                           TRUE ~ ca20g012
+        ca20g013 == 1 ~ -1200,
+        ca20g013 == 2 ~ 150,
+        ca20g013 == 3 ~ 375,
+        ca20g013 == 4 ~ 625,
+        ca20g013 == 5 ~ 875,
+        ca20g013 == 6 ~ 1750,
+        ca20g013 == 7 ~ 3750,
+        ca20g013 == 8 ~ 6250,
+        ca20g013 == 9 ~ 8750,
+        ca20g013 == 10 ~ 10750,
+        ca20g013 == 11 ~ 12750,
+        ca20g013 == 12 ~ 15500,
+        ca20g013 == 13 ~ 18500,
+        ca20g013 == 14 ~ 22500,
+        ca20g013 == 15 ~ 62500,
+        ca20g013 == 999 ~ NA,
+        ca20g012 < -9999999997 ~ NA,
+        TRUE ~ ca20g012
       ),
       # If no partner, then one is not living together with partner
       cf20m025 = ifelse(cf20m024 == 2, 2, cf20m025),
@@ -153,8 +152,7 @@ clean_df <- function(df, background_df = NULL) {
       cf20m129 = ifelse(cf20m128 == 2, 0, cf20m129),
       # If no expected kids, then a lower-bound estimate for the number of
       # years within which to have kids is 31,
-      cf20m130 = case_when(cf20m128 == 2 ~ 31,
-        cf20m130 == 2025 ~ 5,
+      cf20m130 = case_when(cf20m128 == 2 ~ 31, cf20m130 == 2025 ~ 5,
         TRUE ~ cf20m130
       ),
       # Feeling about being single
@@ -190,7 +188,7 @@ clean_df <- function(df, background_df = NULL) {
       cr20m162 = ifelse(cr20m162 == -9, NA, cr20m162),
       # Scale on traditional fertility
       traditional_fertility = mean(c(cv10c135, cv10c136, cv10c137, cv10c138),
-                                   na.rm = TRUE
+        na.rm = TRUE
       ),
       # Scale on traditional motherhood
       cv20l109 = 6 - cv20l109,
@@ -204,8 +202,8 @@ clean_df <- function(df, background_df = NULL) {
       ),
       # Scale on traditional marriage
       across(c(cv20l126, cv20l127, cv20l128, cv20l129, cv20l130), ~ 6 - .x),
-      traditional_marriage = mean(
-        c(cv20l124, cv20l125, cv20l126, cv20l127, cv20l128, cv20l129, cv20l130
+      traditional_marriage = mean(c(
+          cv20l124, cv20l125, cv20l126, cv20l127, cv20l128, cv20l129, cv20l130
         ),
         na.rm = TRUE
       ),
@@ -215,23 +213,23 @@ clean_df <- function(df, background_df = NULL) {
       ),
       # Scale on sexism
       sexism = mean(c(cv20l151, cv20l152, cv20l153, cv20l154), na.rm = TRUE),
-      # Primary occupation
-      employee = ifelse(belbezig_2020 == 1, 1, 0),
-      freelance = ifelse(belbezig_2020 == 3, 1, 0),
-      student = ifelse(belbezig_2020 == 7, 1, 0),
-      homemaker = ifelse(belbezig_2020 == 8, 1, 0),
+      # Primary occupations: employees, freelancers, seeking lost jobs,
+      # students, homemakers, work disability
+      belbezig_2020 = ifelse(belbezig_2020 %in% c(1, 3, 4, 7, 8, 10),
+        belbezig_2020, NA
+      ),
       # Distinguish first- and second- non-Western migrants from others
-      migration_background_bg = 
-        case_when(migration_background_bg %in% c(0, 101, 201) ~ 1,
-                  migration_background_bg %in% c(102, 202) ~ 0),
+      migration_background_bg =
+        case_when(
+          migration_background_bg %in% c(0, 101, 201) ~ 0, # Western origin
+          migration_background_bg %in% c(102, 202) ~ migration_background_bg
+        ),
       # Combine the lowest levels of education
-      oplmet_2020 = case_when(oplmet_2020 %in% c(1, 2, 8, 9) ~ 2,
-                              oplmet_2020 == 7 ~ NA,
-                              TRUE ~ oplmet_2020),
+      oplmet_2020 = case_when(oplmet_2020 > 7 ~ 0, oplmet_2020 == 7 ~ NA,
+        TRUE ~ oplmet_2020
+      ),
       # Distinguish between home owners and non-home owners
-      woning_2020 = case_when(woning_2020 == 1 ~ 1,
-                              woning_2020 == 0 ~ NA,
-                              TRUE ~ 0)
+      woning_2020 = case_when(woning_2020 == 1 ~ 1, woning_2020 %in% 2:4 ~ 0)
     ) %>%
     select(-outcome_available,
       -ca20g078, -ca20g013,
@@ -259,10 +257,22 @@ clean_df <- function(df, background_df = NULL) {
       -cv20l130,
       -cv20l143, -cv20l144, -cv20l145, -cv20l146,
       -cv20l151, -cv20l152, -cv20l153, -cv20l154,
-      -belbezig_2020,
-      -migration_background_bg
     ) %>%
-    mutate(across(everything(), as.numeric), across(oplmet_2020, factor))
+    mutate(
+      across(everything(), as.numeric),
+      across(c(belbezig_2020, migration_background_bg, oplmet_2020), factor)
+    )
+  
+  # Append household ID
+  # Identify the household each person was a member of at the last time that person
+  # was observed, up through December 2020
+  household_linkage <- background_df %>% 
+    arrange(desc(wave)) %>%
+    group_by(nomem_encr) %>%
+    slice_head() %>%
+    select(nomem_encr, nohouse_encr)
+  # Merge the household ID with original_plus_timeshifted_model_df
+  df <- left_join(df, household_linkage)
 
   return(df)
 }
@@ -298,12 +308,8 @@ predict_outcomes <- function(df, background_df = NULL, model_path = "./model.rds
   # Preprocess the fake / holdout data
   df <- clean_df(df, background_df)
   
-  # Exclude the variable nomem_encr if this variable is NOT in your model
-  vars_without_id <- colnames(df)[colnames(df) != "nomem_encr"]
-  
   # Generate predictions from model
-  predictions <- predict(model, 
-                         subset(df, select = vars_without_id)) %>% 
+  predictions <- predict(model, df) %>% 
     mutate(across(.pred_class, ~ as.numeric(.x) - 1))
   
   # Create predictions that should be 0s and 1s rather than, e.g., probabilities

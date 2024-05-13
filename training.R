@@ -13,8 +13,7 @@ library(tidymodels)
 library(xgboost)
 
 train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023, 
-                             cleaned_train_2018to2020, outcome_2018to2020,
-                             background) {
+                             cleaned_train_2018to2020, outcome_2018to2020) {
   # Trains a model using the cleaned dataframe and saves the model to a file.
 
   # Parameters (all of these are dataframes):
@@ -22,7 +21,6 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
   # outcome_2021to2023: PreFer_train_outcome.csv 
   # cleaned_train_2018to2020: A "time-shifted" dataframe of feature data, after it has gone through the clean_df function
   # outcome_2018to2020: Outcome data for fertility in 2018-2020
-  # background: PreFer_train_background_data.csv
 
   set.seed(0)
 
@@ -31,19 +29,17 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
     mutate(new_child = factor(new_child))
   
   model_df_2018to2020 <- merge(cleaned_train_2018to2020, outcome_2018to2020, by = "nomem_encr") %>%
-    mutate(new_child = factor(new_child)) %>%
-    select(-nomem_encr)
+    mutate(new_child = factor(new_child))
   
-  original_plus_timeshifted_model_df <- bind_rows(model_df_2021to2023, model_df_2018to2020) %>%
-    select(-nomem_encr)
+  original_plus_timeshifted_model_df <- bind_rows(model_df_2021to2023, model_df_2018to2020)
 
-  # Dummy-encode the categorical variables and mean impute everything
-  recipe <- recipe(new_child ~ ., model_df_2021to2023) %>%
-    step_dummy(oplmet_2020, one_hot = TRUE) %>%
-    step_impute_mean(everything(), -new_child)
-
-  recipe <- recipe(new_child ~ ., model_df_2018to2020) %>%
-    step_dummy(oplmet_2020, one_hot = TRUE) %>%
+  # Set up a recipe that remove the ids, dummy-encode the categorical variables 
+  # and mean impute everything
+  recipe <- recipe(new_child ~ ., original_plus_timeshifted_model_df) %>%
+    step_rm(nomem_encr, nohouse_encr) %>%
+    step_dummy(c(belbezig_2020, migration_background_bg, oplmet_2020),
+      one_hot = TRUE
+    ) %>%
     step_impute_mean(everything(), -new_child)
 
   # Tune an xgboost model using grid search and cross validation
@@ -53,44 +49,47 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
   ) %>%
     set_engine("xgboost", counts = FALSE)
   # Set up cross-validation folds
-    # Identify the household each person was a member of at the last time that person
-    # was observed, up through December 2020
-    household_linkage <- background %>% 
-      arrange(desc(wave)) %>%
-      group_by(nomem_encr) %>%
-      slice_head %>%
-      select(nomem_encr, nohouse_encr)
-    # Merge the household ID with model_df_2021to2023
-    model_df_2021to2023 <- left_join(model_df_2021to2023, household_linkage)
-    # Set up CV folds within the original data 
-    n_folds <- 5
-    folds <- group_vfold_cv(data = model_df_2021to2023, 
-                            group = nohouse_encr, # Puts household members in same fold as each other
-                            balance = "observations",
-                            v = n_folds)
-    # Within each CV fold, remove ID numbers and append time-shifted data.
-    # Note: We are appending time-shifted data here rather than prior to creating the
-    # CV folds because we only want time-shifted data in training folds, not in test folds.
-    for(i in 1:n_folds) {
-      # Remove the personal and household ID numbers
-      folds$splits[[i]][[1]] <- folds$splits[[i]][[1]] %>%
-        select(-c(nomem_encr, nohouse_encr))
-      # Identify what index the first time-shifted observation will be placed at
-      start_index <- nrow(folds$splits[[i]][[1]]) + 1
-      # Append the time-shifted data
-      folds$splits[[i]][[1]] <- bind_rows(folds$splits[[i]][[1]], model_df_2018to2020)
-      # Add the indices for time-shifted data to the vector of train fold indices 
-      end_index <- nrow(folds$splits[[i]][[1]])
-      time_shifted_data_indices <- c(start_index:end_index)
-      folds$splits[[i]][[2]] <- c(folds$splits[[i]][[2]], time_shifted_data_indices)
-    } 
+
+  # Set up CV folds within the original data
+  n_folds <- 5
+  folds <- filter(original_plus_timeshifted_model_df, time_shifted_data == 0
+  ) %>%
+    group_vfold_cv(
+      group = nohouse_encr, # Puts household members in same fold as each other
+      balance = "observations",
+      v = n_folds
+    )
+  # Within each CV fold, append time-shifted data.
+  # Note: We are appending time-shifted data here rather than prior to creating the
+  # CV folds because we only want time-shifted data in training folds, not in test folds.
+  # We then make sure that the time-shifted people we append do not come from the same
+  # households as those in the test folds
+  for (i in 1:n_folds) {
+    # Identify what index the first time-shifted observation will be placed at
+    start_index <- nrow(folds$splits[[i]][[1]]) + 1
+    # Append the time-shifted data but exclude those in the same households as
+    # in the test fold
+    test_fold <- folds$splits[[i]][[1]][-folds$splits[[i]][[2]], ]
+    folds$splits[[i]][[1]] <- bind_rows(
+      folds$splits[[i]][[1]],
+      filter(original_plus_timeshifted_model_df,
+        time_shifted_data == 1,
+        !nohouse_encr %in% test_fold$nohouse_encr
+      )
+    )
+    # Add the indices for time-shifted data to the vector of train fold indices
+    end_index <- nrow(folds$splits[[i]][[1]])
+    time_shifted_data_indices <- c(start_index:end_index)
+    folds$splits[[i]][[2]] <-
+      c(folds$splits[[i]][[2]], time_shifted_data_indices)
+  }
   
   # Grid search for hyperparameter tuning
   grid <- expand.grid(
-    mtry = c(.05, .1, .15, .2, .25, .3, .35, .4),
-    trees = c(10, 50, 100, 300, 600, 900, 1200),
-    tree_depth = 3:7,
-    learn_rate = c(.1, .3, .5, .7, .9, 1.1)
+    mtry = c(.05, .1, .2, .3, .4, .6, .8, 1),
+    trees = c(10, 50, 100, 200),
+    tree_depth = 1:7,
+    learn_rate = c(.01, .1, .3, .5, .7, .9, 1.1)
   )
   best <- tune_grid(model_to_tune, recipe, folds,
     grid = grid,
