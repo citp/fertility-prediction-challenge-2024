@@ -79,7 +79,6 @@ features <- features %>%
 # "outcome_available" (need to create this based on the shifted outcome variable)
 # "birthyear_bg" (change the value to reflect the time shift)
 # "age_bg" (change the value to reflect the time shift)
-# "cf20m026" partner birth year (change the value to reflect the time shift)
 
 # The following features are not associated with a specific wave, and can be left as-is
 # because they are typically time-invariant: 
