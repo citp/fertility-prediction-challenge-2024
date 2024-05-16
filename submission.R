@@ -19,13 +19,13 @@ library(tidyr)
 library(tidymodels)
 library(xgboost)
 
-clean_df <- function(df, background_df = NULL) {
+clean_df <- function(df, background_df) {
   # Preprocess the input dataframe to feed the model.
   ### If no cleaning is done (e.g. if all the cleaning is done in a pipeline) leave only the "return df" command
 
   # Parameters:
   # df (dataframe): The input dataframe containing the raw data (e.g., from PreFer_train_data.csv or PreFer_fake_data.csv).
-  # background (dataframe): Optional input dataframe containing background data (e.g., from PreFer_train_background_data.csv or PreFer_fake_background_data.csv).
+  # background (dataframe): PreFer_train_background_data.csv or PreFer_fake_background_data.csv 
 
   # Returns:
   # data frame: The cleaned dataframe with only the necessary columns and processed variables.
@@ -277,7 +277,7 @@ clean_df <- function(df, background_df = NULL) {
   return(df)
 }
 
-predict_outcomes <- function(df, background_df = NULL, model_path = "./model.rds"){
+predict_outcomes <- function(df, background_df, model_path = "./model.rds"){
   # Generate predictions using the saved model and the input dataframe.
     
   # The predict_outcomes function accepts a dataframe as an argument
