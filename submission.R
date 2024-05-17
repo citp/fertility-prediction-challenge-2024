@@ -50,8 +50,15 @@ clean_df <- function(df, background_df) {
     # Partnership status. We thank Sayash Kapoor and Benedikt Strobl's L1
     # regression for directing our attention towards cf20m029
     "cf20m024", "cf20m025", "cf20m026", "cf20m029", "cf20m030",
-    # Expected kids
-    "cf20m128", "cf20m129", "cf20m130",
+    # Do you think you will have (more) children in the future?
+    "cf08a128", "cf09b128", "cf10c128", "cf11d128", "cf12e128", "cf13f128", 
+    "cf14g128", "cf15h128", "cf16i128", "cf17j128", "cf18k128", "cf19l128", "cf20m128",
+    # How many children do you think you will have in the future?
+    "cf08a129", "cf09b129", "cf10c129", "cf11d129", "cf12e129", "cf13f129", 
+    "cf14g129", "cf15h129", "cf16i129", "cf17j129", "cf18k129", "cf19l129", "cf20m129",
+    # Within how many years do you hope to have your (first-next) child?
+    "cf08a130", "cf09b130", "cf10c130", "cf11d130", "cf12e130", "cf13f130", "cf14g130", 
+    "cf15h130", "cf16i130", "cf17j130", "cf18k130", "cf19l130", "cf20m130",
     # Feelings about being single
     "cf20m166",
     # Existing children
@@ -149,12 +156,36 @@ clean_df <- function(df, background_df) {
       # If no partner, then one is not married to partner
       cf20m030 = ifelse(cf20m024 == 2, 2, cf20m030),
       # If no expected kids, then expected number of kids is 0
+      cf08a129 = ifelse(cf08a128 == 2, 0, cf08a129),
+      cf09b129 = ifelse(cf09b128 == 2, 0, cf09b129),
+      cf10c129 = ifelse(cf10c128 == 2, 0, cf10c129),
+      cf11d129 = ifelse(cf11d128 == 2, 0, cf11d129),
+      cf12e129 = ifelse(cf12e128 == 2, 0, cf12e129),
+      cf13f129 = ifelse(cf13f128 == 2, 0, cf13f129),
+      cf14g129 = ifelse(cf14g128 == 2, 0, cf14g129),
+      cf15h129 = ifelse(cf15h128 == 2, 0, cf15h129),
+      cf16i129 = ifelse(cf16i128 == 2, 0, cf16i129),
+      cf17j129 = ifelse(cf17j128 == 2, 0, cf17j129),
+      cf18k129 = ifelse(cf18k128 == 2, 0, cf18k129),
+      cf19l129 = ifelse(cf19l128 == 2, 0, cf19l129),
       cf20m129 = ifelse(cf20m128 == 2, 0, cf20m129),
-      # If no expected kids, then a lower-bound estimate for the number of
-      # years within which to have kids is 31,
-      cf20m130 = case_when(cf20m128 == 2 ~ 31, cf20m130 == 2025 ~ 5,
-        TRUE ~ cf20m130
-      ),
+      # If no expected kids, then a lower-bound estimate for the number of years
+      # within which to have kids is 31 (since the largest value actually reported is 30)
+      cf08a130 = ifelse(cf08a128 == 2, 31, cf08a130),
+      cf09b130 = ifelse(cf09b128 == 2, 31, cf09b130),
+      cf10c130 = ifelse(cf10c128 == 2, 31, cf10c130),
+      cf11d130 = ifelse(cf11d128 == 2, 31, cf11d130),
+      cf12e130 = ifelse(cf12e128 == 2, 31, cf12e130),
+      cf13f130 = ifelse(cf13f128 == 2, 31, cf13f130),
+      cf14g130 = ifelse(cf14g128 == 2, 31, cf14g130),
+      cf15h130 = ifelse(cf15h128 == 2, 31, cf15h130),
+      cf16i130 = ifelse(cf16i128 == 2, 31, cf16i130),
+      cf17j130 = ifelse(cf17j128 == 2, 31, cf17j130),
+      cf18k130 = ifelse(cf18k128 == 2, 31, cf18k130),
+      cf19l130 = ifelse(cf19l128 == 2, 31, cf19l130),
+      cf20m130 = ifelse(cf20m128 == 2, 31, cf20m130),
+      # Correct a value where calendar year was reported instead of number of years
+      cf20m130 = ifelse(cf20m130 == 2025, 5, cf20m130),
       # Feeling about being single
       cf20m166 = ifelse(cf20m166 == 99, NA, cf20m166),
       # If one never had children, then one does not have any living children
@@ -260,7 +291,9 @@ clean_df <- function(df, background_df) {
     ) %>%
     mutate(
       across(everything(), as.numeric),
-      across(c(belbezig_2020, migration_background_bg, oplmet_2020), factor)
+      across(c(belbezig_2020, migration_background_bg, oplmet_2020, 
+               cf08a130, cf09b130, cf10c130, cf11d130, cf12e130, cf13f130, 
+               cf14g130, cf15h130, cf16i130, cf17j130, cf18k130, cf19l130, cf20m130), factor)
     )
   
   # Append household ID
