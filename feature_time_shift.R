@@ -237,7 +237,17 @@ features_for_2018to2020 <- features_for_2018to2020 %>%
          cv10c135 = NA,
          cv10c136 = NA, 
          cv10c137 = NA, 
-         cv10c138 = NA)
+         cv10c138 = NA,
+         cf08a128 = NA, 
+         cf09b128 = NA, 
+         cf10c128 = NA,
+         cf08a129 = NA,
+         cf09b129 = NA,
+         cf10c129 = NA, 
+         cf08a130 = NA, 
+         cf09b130 = NA, 
+         cf10c130 = NA
+  )
 
 ######## STEP 6: SAVE THE FILES! ######## 
 write_csv(features_for_2018to2020, "train_data_for_2018to2020.csv")
