@@ -37,7 +37,7 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
   # and mean impute everything
   recipe <- recipe(new_child ~ ., original_plus_timeshifted_model_df) %>%
     step_rm(nomem_encr, nohouse_encr) %>%
-    step_dummy(c(belbezig_2020, migration_background_bg, oplmet_2020),
+    step_dummy(c(cf20m128),
       one_hot = TRUE
     ) %>%
     step_impute_mean(everything(), -new_child)
