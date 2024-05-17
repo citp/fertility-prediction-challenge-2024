@@ -56,16 +56,45 @@ clean_df <- function(df, background_df) {
   df <- filter(df, outcome_available == 1) %>%
     rowwise() %>%
     mutate(
+      # Fix entries where people said calendar year instead of number of years 
+      # Note: this never happens in our time-shifted data, so we don't need this code chunk to work for time-shifted data
+      cf20m130 = case_when(cf20m130 > 2000 ~ cf20m130 - 2020,
+                TRUE ~ cf20m130),  
+      cf19l129 = case_when(cf19l129 > 2000 ~ cf19l129 - 2019,
+                           TRUE ~ cf19l129),
+      # Use 2019 fertility intentions to fill in missing data for 2020 fertility intentions
+      expect_more_children = case_when(
+        cf20m128 == 1 ~ 1, # "yes" in 2020
+        cf20m128 == 2 ~ 2, # "no" in 2020
+        cf20m128 == 3 & cf19l128 == 1 ~ 1, # "IDK" in 2020, "yes" in 2019: these people have new child with somewhat similar frequency to people who said "yes" in 2020
+        cf20m128 == 3 & cf19l128 == 2 ~ 2, # "IDK" in 2020, "no" in 2019: this almost always means "no" for the new_child outcome
+        is.na(cf20m128) & cf19l128 == 1 ~ 1, # NA in 2020, "yes" in 2019
+        is.na(cf20m128) & cf19l128 == 2 ~ 2, # NA in 2020, "no" in 2019
+        TRUE ~ NA # otherwise, NA
+      ), 
+      how_many_more_children = case_when(
+        expect_more_children == 2 ~ 0, # If no expected kids, then the expected number of kids is 0
+        !is.na(cf20m129) ~ cf20m129, # If there is a non-missing value in 2020, use that 
+        is.na(cf20m129) ~ cf19l129, # If there is no response in 2020, use the 2019 answer
+        TRUE ~ NA # otherwise, NA
+      ), 
+      children_within_how_many_years = case_when(
+        expect_more_children == 1 & !is.na(cf20m130) ~ cf20m130, 
+        expect_more_children == 1 & is.na(cf20m130) ~ cf19l130 - 1, # Subtract 1 year to make 2019 response equivalent to a 2020 response
+                                                                    # Sometimes subtracting 1 gives a value of -1; that is intentional 
+        expect_more_children == 2 ~ 31, # If no expected children, set year higher than the highest observed value
+        TRUE ~ NA
+        ),
       # If no expected kids, then expected number of kids is 0
       cf20m129 = ifelse(cf20m128 == 2, 0, cf20m129),
       cf19l129 = ifelse(cf19l128 == 2, 0, cf19l129),
       # If no expected kids, then a lower-bound estimate for the number of
       # years within which to have kids is 31,
-      cf20m130 = case_when(cf20m128 == 2 ~ 31, cf20m130 == 2025 ~ 5,
+      cf20m130 = case_when(cf20m128 == 2 ~ 31,
                            TRUE ~ cf20m130
       ),
       cf19l130 = case_when(cf19l128 == 2 ~ 31,
-        TRUE ~ cf19l130)
+                           TRUE ~ cf19l130) 
       ) %>%
     select(-outcome_available
            ) %>%
