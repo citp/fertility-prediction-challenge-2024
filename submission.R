@@ -47,9 +47,21 @@ clean_df <- function(df, background_df) {
     "ca20g012", "ca20g013", "ca20g078",
     # Number of rooms
     "cd20m034",
-    # Partnership status. We thank Sayash Kapoor and Benedikt Strobl's L1
+    # Data about partner from 2020. We thank Sayash Kapoor and Benedikt Strobl's L1
     # regression for directing our attention towards cf20m029
-    "cf20m024", "cf20m025", "cf20m026", "cf20m029", "cf20m030",
+    "cf20m024", "cf20m025", "cf20m026", "cf20m027", "cf20m028", "cf20m029", "cf20m030", "cf20m031", "cf20m032",
+    # Data about partner from 2019
+    "cf19l024", "cf19l025", "cf19l026", "cf19l027", "cf19l028", "cf19l029", "cf19l030", "cf19l031", "cf19l032",
+    # Data about partner from 2018
+    "cf18k024", "cf18k025", "cf18k026", "cf18k027", "cf18k028", "cf18k029", "cf18k030", "cf18k031", "cf18k032",
+    # Birth year of first child
+    "cf18k456", "cf19l456", "cf20m456", 
+    # Birth year of second child 
+    "cf18k457", "cf19l457", "cf20m457",
+    # Birth year of third child
+    "cf18k458", "cf19l458", "cf20m458",
+    # Birth year of fourth child
+    "cf18k459", "cf19l459", "cf20m459",
     # Do you think you will have (more) children in the future?
     "cf08a128", "cf09b128", "cf10c128", "cf11d128", "cf12e128", "cf13f128", 
     "cf14g128", "cf15h128", "cf16i128", "cf17j128", "cf18k128", "cf19l128", "cf20m128",
@@ -63,6 +75,8 @@ clean_df <- function(df, background_df) {
     "cf20m166",
     # Existing children
     "cf20m454", "cf20m455",
+    "cf19l454", "cf19l455",
+    "cf18k454", "cf18k455",
     # Relationship with child
     "cf20m513",
     "cf20m514",
@@ -153,9 +167,14 @@ clean_df <- function(df, background_df) {
       ),
       # If no partner, then one is not living together with partner
       cf20m025 = ifelse(cf20m024 == 2, 2, cf20m025),
+      cf19l025 = ifelse(cf19l024 == 2, 2, cf19l025),
+      cf18k025 = ifelse(cf18k024 == 2, 2, cf18k025),
       # If no partner, then one is not married to partner
       cf20m030 = ifelse(cf20m024 == 2, 2, cf20m030),
+      cf19l030 = ifelse(cf19l024 == 2, 2, cf19l030),
+      cf18k030 = ifelse(cf18k024 == 2, 2, cf18k030),
       # If no expected kids, then expected number of kids is 0
+      # Note: in some years, "I don't know" was an option for *128; we don't use that info here, so the recoded *129 may not contain all info from *128
       cf08a129 = ifelse(cf08a128 == 2, 0, cf08a129),
       cf09b129 = ifelse(cf09b128 == 2, 0, cf09b129),
       cf10c129 = ifelse(cf10c128 == 2, 0, cf10c129),
@@ -190,6 +209,8 @@ clean_df <- function(df, background_df) {
       cf20m166 = ifelse(cf20m166 == 99, NA, cf20m166),
       # If one never had children, then one does not have any living children
       cf20m455 = ifelse(cf20m454 == 2, 0, cf20m455),
+      cf19l455 = ifelse(cf19l454 == 2, 0, cf19l455),
+      cf18k455 = ifelse(cf18k454 == 2, 0, cf18k455),
       # Scale for feeling towards child
       across(c(cf20m515, cf20m516, cf20m518, cf20m519, cf20m520, cf20m521),
         ~ 8 - .x
@@ -264,8 +285,9 @@ clean_df <- function(df, background_df) {
     ) %>%
     select(-outcome_available,
       -ca20g078, -ca20g013,
-      -cf20m128,
       -cf20m454,
+      -cf19l454, 
+      -cf18k454,
       -cf20m513,
       -cf20m514,
       -cf20m515,
@@ -291,9 +313,11 @@ clean_df <- function(df, background_df) {
     ) %>%
     mutate(
       across(everything(), as.numeric),
-      across(c(belbezig_2020, migration_background_bg, oplmet_2020, 
-               cf08a130, cf09b130, cf10c130, cf11d130, cf12e130, cf13f130, 
-               cf14g130, cf15h130, cf16i130, cf17j130, cf18k130, cf19l130, cf20m130), factor)
+      across(c(belbezig_2020, migration_background_bg, oplmet_2020,
+               cf18k027, cf19l027, cf20m027,
+               cf08a128, cf09b128, cf10c128, cf11d128, cf12e128,  
+               cf13f128, cf14g128, cf15h128, cf16i128, cf17j128,
+               cf18k128, cf19l128, cf20m128), factor) # Some of the *128 are binary but it varies by year, so since we are doing a time-shift, I am one-hot encoding them all for simplicity
     )
   
   # Append household ID

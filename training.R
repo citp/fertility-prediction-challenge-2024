@@ -32,14 +32,16 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
     mutate(new_child = factor(new_child))
   
   original_plus_timeshifted_model_df <- bind_rows(model_df_2021to2023, model_df_2018to2020)
-
+  
   # Set up a recipe that remove the ids, dummy-encode the categorical variables 
   # and mean impute everything
   recipe <- recipe(new_child ~ ., original_plus_timeshifted_model_df) %>%
     step_rm(nomem_encr, nohouse_encr) %>%
-    step_dummy(c(belbezig_2020, migration_background_bg, oplmet_2020, 
-                 cf08a130, cf09b130, cf10c130, cf11d130, cf12e130, cf13f130, 
-                 cf14g130, cf15h130, cf16i130, cf17j130, cf18k130, cf19l130, cf20m130),
+    step_dummy(c(belbezig_2020, migration_background_bg, oplmet_2020,
+                 cf18k027, cf19l027, cf20m027,
+                 cf08a128, cf09b128, cf10c128, cf11d128, cf12e128,  
+                 cf13f128, cf14g128, cf15h128, cf16i128, cf17j128,
+                 cf18k128, cf19l128, cf20m128), # Some of the *128 are binary but it varies by year, so since we are doing a time-shift, I am one-hot encoding them all for simplicity
       one_hot = TRUE
     ) %>%
     step_impute_mean(everything(), -new_child)
