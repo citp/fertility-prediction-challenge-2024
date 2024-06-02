@@ -38,7 +38,6 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
   recipe <- recipe(new_child ~ ., original_plus_timeshifted_model_df) %>%
     step_rm(nomem_encr, nohouse_encr) %>%
     step_dummy(c(belbezig_2020, migration_background_bg, oplmet_2020,
-                 cf18k027, cf19l027, cf20m027,
                  cf08a128, cf09b128, cf10c128, cf11d128, cf12e128,  
                  cf13f128, cf14g128, cf15h128, cf16i128, cf17j128,
                  cf18k128, cf19l128, cf20m128), # Some of the *128 are binary but it varies by year, so since we are doing a time-shift, I am one-hot encoding them all for simplicity

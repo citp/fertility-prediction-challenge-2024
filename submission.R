@@ -49,11 +49,15 @@ clean_df <- function(df, background_df) {
     "cd20m034",
     # Data about partner from 2020. We thank Sayash Kapoor and Benedikt Strobl's L1
     # regression for directing our attention towards cf20m029
-    "cf20m024", "cf20m025", "cf20m026", "cf20m027", "cf20m028", "cf20m029", "cf20m030", "cf20m031", "cf20m032",
+    "cf20m024", "cf20m025", "cf20m029", "cf20m030", "cf20m031", "cf20m032", # I skipped feature on country of origin because almost all are from Netherlands
     # Data about partner from 2019
-    "cf19l024", "cf19l025", "cf19l026", "cf19l027", "cf19l028", "cf19l029", "cf19l030", "cf19l031", "cf19l032",
+    "cf19l024", "cf19l025", "cf19l029", "cf19l030", "cf19l031", "cf19l032",
     # Data about partner from 2018
-    "cf18k024", "cf18k025", "cf18k026", "cf18k027", "cf18k028", "cf18k029", "cf18k030", "cf18k031", "cf18k032",
+    "cf18k024", "cf18k025", "cf18k029", "cf18k030", "cf18k031", "cf18k032",
+    # Data about partner's birth year (we need to coalesce data across years to find the most recently reported value)
+    "cf20m026", "cf19l026", "cf18k026", "cf17j026", "cf16i026", "cf15h026", "cf14g026", "cf13f026", "cf12e026", "cf11d026", "cf10c026", "cf09b026", "cf08a026",
+    # Data about year relationship began (we need to coalesce data across years to find the most recently reported value)
+    "cf20m028", "cf19l028", "cf18k028", "cf17j028", "cf16i028", "cf15h028", "cf14g028", "cf13f028", "cf12e028", "cf11d028", "cf10c028", "cf09b028", "cf08a028",
     # Birth year of first child
     "cf18k456", "cf19l456", "cf20m456", 
     # Birth year of second child 
@@ -173,6 +177,10 @@ clean_df <- function(df, background_df) {
       cf20m030 = ifelse(cf20m024 == 2, 2, cf20m030),
       cf19l030 = ifelse(cf19l024 == 2, 2, cf19l030),
       cf18k030 = ifelse(cf18k024 == 2, 2, cf18k030),
+      # Identify partner's birth year based on most recent wave in which it was reported
+      partner_birth_year = coalesce(cf20m026, cf19l026, cf18k026, cf17j026, cf16i026, cf15h026, cf14g026, cf13f026, cf12e026, cf11d026, cf10c026, cf09b026, cf08a026),
+      # Identify year relationship began based on most recet wave in which it was reported
+      year_relationship_began = coalesce(cf20m028, cf19l028, cf18k028, cf17j028, cf16i028, cf15h028, cf14g028, cf13f028, cf12e028, cf11d028, cf10c028, cf09b028, cf08a028),
       # If no expected kids, then expected number of kids is 0
       # Note: in some years, "I don't know" was an option for *128; we don't use that info here, so the recoded *129 may not contain all info from *128
       cf08a129 = ifelse(cf08a128 == 2, 0, cf08a129),
@@ -284,6 +292,8 @@ clean_df <- function(df, background_df) {
       woning_2020 = case_when(woning_2020 == 1 ~ 1, woning_2020 %in% 2:4 ~ 0)
     ) %>%
     select(-outcome_available,
+      -cf20m026, -cf19l026, -cf18k026, -cf17j026, -cf16i026, -cf15h026, -cf14g026, -cf13f026, -cf12e026, -cf11d026, -cf10c026, -cf09b026, -cf08a026,
+      -cf20m028, -cf19l028, -cf18k028, -cf17j028, -cf16i028, -cf15h028, -cf14g028, -cf13f028, -cf12e028, -cf11d028, -cf10c028, -cf09b028, -cf08a028,
       -ca20g078, -ca20g013,
       -cf20m454,
       -cf19l454, 
@@ -314,7 +324,6 @@ clean_df <- function(df, background_df) {
     mutate(
       across(everything(), as.numeric),
       across(c(belbezig_2020, migration_background_bg, oplmet_2020,
-               cf18k027, cf19l027, cf20m027,
                cf08a128, cf09b128, cf10c128, cf11d128, cf12e128,  
                cf13f128, cf14g128, cf15h128, cf16i128, cf17j128,
                cf18k128, cf19l128, cf20m128), factor) # Some of the *128 are binary but it varies by year, so since we are doing a time-shift, I am one-hot encoding them all for simplicity
