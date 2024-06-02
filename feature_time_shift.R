@@ -252,7 +252,13 @@ features_for_2018to2020 <- features_for_2018to2020 %>%
          cf10c026 = NA, 
          cf08a028 = NA, 
          cf09b028 = NA, 
-         cf10c028 = NA 
+         cf10c028 = NA, 
+         cf08a025 = NA, 
+         cf09b025 = NA, 
+         cf10c025 = NA,
+         cf08a032 = NA, 
+         cf09b032 = NA, 
+         cf10c032 = NA
   )
 
 ######## STEP 6: SAVE THE FILES! ######## 

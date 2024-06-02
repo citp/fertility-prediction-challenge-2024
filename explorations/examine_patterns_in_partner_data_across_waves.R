@@ -2,7 +2,7 @@
 # Exploration of data about partner from LISS 
 library(tidyverse)
 
-# The purpose of this code is to determine which features about the partner requires us to 
+# The purpose of this code is to determine which features about the partner require us to 
 # coalesce data across waves. For example: 
 # (1) Partner's birthyear is only reported once. If the person remains with the same partner, the birthyear
 # is not reported again in subsequent waves. Therefore, we need to coalesce data across waves.

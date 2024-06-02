@@ -1,5 +1,5 @@
 # Emily Cantrell
-# Exploration of fertility intentions questions from LISS
+# Exploration of merging in data from the partner's survey
 library(tidyverse)
 
 # This is a draft of the code for linking partner's data with the primary respondent's data, 
@@ -226,3 +226,9 @@ train_linked_with_partner %>%
 # Almost all data on fertility intentions is missing among the few same-sex couples, 
 # so I didn't make a plot for them.
 
+# HOW MANY PARTNERS COME FROM THE SUPPLEMENTARY DATA?
+nrow(train_linked_with_partner)
+min(train_full$birthyear_bg)
+train_linked_with_partner %>%
+  group_by(new_child, birthyear_bg_PartnerSurvey < 1975) %>%
+  count()
