@@ -233,6 +233,16 @@ clean_df <- function(df, background_df) {
     "sted_2020",
     # Dwelling type
     "woning_2020",
+    # Gender of first, second, and third child
+    "cf20m068", "cf20m069", "cf20m070", 
+    # Type of parent to first, second, and third child (bio, step, adoptive, foster)
+    "cf20m098", "cf20m099", "cf20m100", 
+    # Current partner is biological parent of first, second, third child
+    "cf20m113", "cf20m114", "cf20m115",
+    # Satisfaction with relationship
+    "cf19l180", "cf20m180",
+    # Satisfaction with family life
+    "cf19l181", "cf20m181",
     # Partner survey: fertility expectations in 2020
     "cf20m128_PartnerSurvey", "cf20m129_PartnerSurvey", "cf20m130_PartnerSurvey",
     # Partner survey: fertility expectations in 2019
@@ -404,7 +414,6 @@ clean_df <- function(df, background_df) {
       woning_2020 = case_when(woning_2020 == 1 ~ 1, woning_2020 %in% 2:4 ~ 0)
     ) %>%
     select(-outcome_available,
-      -cf20m026, -cf19l026, -cf18k026, -cf17j026, -cf16i026, -cf15h026, -cf14g026, -cf13f026, -cf12e026, -cf11d026, -cf10c026, -cf09b026, -cf08a026,
       -cf20m028, -cf19l028, -cf18k028, -cf17j028, -cf16i028, -cf15h028, -cf14g028, -cf13f028, -cf12e028, -cf11d028, -cf10c028, -cf09b028, -cf08a028,
       -ca20g078, -ca20g013,
       -cf20m513,
@@ -433,6 +442,7 @@ clean_df <- function(df, background_df) {
     mutate(
       across(everything(), as.numeric),
       across(c(belbezig_2020, migration_background_bg, oplmet_2020,
+               cf20m098, cf20m099, cf20m100,
                cf08a128, cf09b128, cf10c128, cf11d128, cf12e128,  
                cf13f128, cf14g128, cf15h128, cf16i128, cf17j128,
                cf18k128, cf19l128, cf20m128, 
