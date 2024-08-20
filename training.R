@@ -25,9 +25,11 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
   set.seed(0)
 
   # Combine cleaned training data and outcome_df
-  model_df_2021to2023 <- merge(cleaned_train_2021to2023, outcome_2021to2023, by = "nomem_encr")
+  model_df_2021to2023 <- merge(cleaned_train_2021to2023, outcome_2021to2023, by = "nomem_encr") %>%
+    mutate(new_child = factor(new_child))
   
-  model_df_2018to2020 <- merge(cleaned_train_2018to2020, outcome_2018to2020, by = "nomem_encr")
+  model_df_2018to2020 <- merge(cleaned_train_2018to2020, outcome_2018to2020, by = "nomem_encr") %>%
+    mutate(new_child = factor(new_child))
   
   original_plus_timeshifted_model_df <- bind_rows(model_df_2021to2023, model_df_2018to2020)
   
@@ -38,8 +40,7 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
     step_mutate(across(c(cf18k128, cf19l128, cf20m128,
         cf20m128_PartnerSurvey, cf19l128_PartnerSurvey,
         belbezig_2020, oplmet_2020,
-        migration_background_bg,
-        new_child
+        migration_background_bg
       ),
       factor
     )) %>%
