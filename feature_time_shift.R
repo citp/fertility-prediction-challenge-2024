@@ -78,7 +78,77 @@ features <- features %>%
 # "nomem_encr" (this is the ID number; need to edit it to distinguish the person from the same person in another year)
 # "outcome_available" (need to create this based on the shifted outcome variable)
 # "birthyear_bg" (change the value to reflect the time shift)
-# "age_bg" (change the value to reflect the time shift)
+# "cf11d026" (partner birth year 2011)
+# "cf12e026" (partner birth year 2012)
+# "cf13f026" (partner birth year 2013)
+# "cf14g026" (partner birth year 2014)
+# "cf15h026" (partner birth year 2015)
+# "cf16i026" (partner birth year 2016)
+# "cf17j026" (partner birth year 2017)
+# "cf18k026" (partner birth year 2018)
+# "cf19l026" (partner birth year 2019)
+# "cf20m026" (partner birth year 2020)
+# "cf11d028" (year relationship began 2011)
+# "cf12e028" (year relationship began 2012)
+# "cf13f028" (year relationship began 2013)
+# "cf14g028" (year relationship began 2014)
+# "cf15h028" (year relationship began 2015)
+# "cf16i028" (year relationship began 2016)
+# "cf17j028" (year relationship began 2017)
+# "cf18k028" (year relationship began 2018)
+# "cf19l028" (year relationship began 2019)
+# "cf20m028" (year relationship began 2020)
+# "cf18k029" (year started living together 2018)
+# "cf19l029" (year started living together 2019)
+# "cf20m029" (year started living together 2020)
+# "cf18k031" (year married 2018)
+# "cf19l031" (year married 2019)
+# "cf20m031" (year married 2020)
+# "cf18k456" (first child birthyear 2018)
+# "cf19l456" (first child birthyear 2019)
+# "cf20m456" (first child birthyear 2020)
+# "cf18k457" (second child birthyear 2018)
+# "cf19l457" (second child birthyear 2019)
+# "cf20m457" (second child birthyear 2020)
+# "cf18k458" (third child birthyear 2018)
+# "cf19l458" (third child birthyear 2019)
+# "cf20m458" (third child birthyear 2020)
+# "cf18k459" (fourth child birthyear 2018)
+# "cf19l459" (fourth child birthyear 2019)
+# "cf20m459" (fourth child birthyear 2020)
+# "cf18k460" (fifth child birthyear 2018)
+# "cf19l460" (fifth child birthyear 2019)
+# "cf20m460" (fifth child birthyear 2020)
+# "cf18k461" (sixth child birthyear 2018)
+# "cf19l461" (sixth child birthyear 2019)
+# "cf20m461" (sixth child birthyear 2020)
+# "cf18k462" (seventh child birthyear 2018)
+# "cf19l462" (seventh child birthyear 2019)
+# "cf20m462" (seventh child birthyear 2020)
+# "cf18k463" (eighth child birthyear 2018)
+# "cf19l463" (eighth child birthyear 2019)
+# "cf20m463" (eighth child birthyear 2020)
+# "cf18k464" (ninth child birthyear 2018)
+# "cf19l464" (ninth child birthyear 2019)
+# "cf20m464" (ninth child birthyear 2020)
+# "cf18k465" (tenth child birthyear 2018)
+# "cf19l465" (tenth child birthyear 2019)
+# "cf20m465" (tenth child birthyear 2020)
+# "cf18k466" (eleventh child birthyear 2018)
+# "cf19l466" (eleventh child birthyear 2019)
+# "cf20m466" (eleventh child birthyear 2020)
+# "cf18k467" (twelfth child birthyear 2018)
+# "cf19l467" (twelfth child birthyear 2019)
+# "cf20m467" (twelfth child birthyear 2020)
+# "cf18k468" (thirteenth child birthyear 2018)
+# "cf19l468" (thirteenth child birthyear 2019)
+# "cf20m468" (thirteenth child birthyear 2020)
+# "cf18k469" (fourteenth child birthyear 2018)
+# "cf19l469" (fourteenth child birthyear 2019)
+# "cf20m469" (fourteenth child birthyear 2020)
+# "cf18k470" (fifteenth child birthyear 2018)
+# "cf19l470" (fifteenth child birthyear 2019)
+# "cf20m470" (fifteenth child birthyear 2020)
 
 # The following features are not associated with a specific wave, and can be left as-is
 # because they are typically time-invariant: 
@@ -166,31 +236,44 @@ colnames(features) <- variable_names$new_var_name
 features <- features %>%
   select(any_of(real_feature_names))
 
-# Shift the content of birthyear and age features by the appropriate number of years
-# For these two features, the variable name will remain the same. 
-# For age, we want to know their actual age at year t-1. Therefore, we SUBTRACT 
-# the number of years by which we are time-shifting. 
-# For birthyear, we want to know what the equivalent birthyear would be for someone 
+# Shift the content of year features by the appropriate number of years
+# The variable name will remain the same. 
+# For year variables, we want to know what the equivalent yyear would be for someone 
 # in the 2021 cohort. Therefore, we ADD the number of years by which we are time-shifting.
-features <- features %>%
-  mutate(age_bg = age_bg - years_to_shift, 
-         birthyear_bg = birthyear_bg + years_to_shift)
+features <- features %>% 
+  mutate(across(c("birthyear_bg",
+                  "cf11d026", "cf12e026", "cf13f026", "cf14g026", "cf15h026", 
+                  "cf16i026", "cf17j026", "cf18k026", "cf19l026", "cf20m026",
+                  "cf11d028", "cf12e028", "cf13f028", "cf14g028", "cf15h028", 
+                  "cf16i028", "cf17j028", "cf18k028", "cf19l028", "cf20m028",
+                  "cf18k029", "cf19l029", "cf20m029",
+                  "cf18k031", "cf19l031", "cf20m031",
+                  "cf18k456", "cf19l456", "cf20m456",
+                  "cf18k457", "cf19l457", "cf20m457",
+                  "cf18k458", "cf19l458", "cf20m458",
+                  "cf18k459", "cf19l459", "cf20m459",
+                  "cf18k460", "cf19l460", "cf20m460",
+                  "cf18k461", "cf19l461", "cf20m461",
+                  "cf18k462", "cf19l462", "cf20m462",
+                  "cf18k463", "cf19l463", "cf20m463",
+                  "cf18k464", "cf19l464", "cf20m464",
+                  "cf18k465", "cf19l465", "cf20m465",
+                  "cf18k466", "cf19l466", "cf20m466",
+                  "cf18k467", "cf19l467", "cf20m467",
+                  "cf18k468", "cf19l468", "cf20m468",
+                  "cf18k469", "cf19l469", "cf20m469",
+                  "cf18k470", "cf19l470", "cf20m470",),
+                ~ .x + years_to_shift))
 
 # Handle other special features
-# Our model currently uses three features that need special attention in time-shifting. 
-# cf20m026 (Partner birth year): shift the year forward
-features <- features %>%
-  mutate(cf20m026 = cf20m026 + years_to_shift)
-# cf20m029 (In what year did you start living together with your partner?): shift the year forward
-features <- features %>%
-  mutate(cf20m029 = cf20m029 + years_to_shift)
-# nettohh_f_2020 (net household income in euros) needs to be adjusted for inflation.
+# nettohh_f_2020 (net household income in euros) and nettoink_f_2020 (net individual income in euros) needs to be adjusted for inflation.
 # Inflation in euros Sept. 2017 to Sept. 2020 was 5.6% according to https://tools.csb.gov.lv/cpi_calculator/en/2017M09-2020M09/0/100
 # I got 5.7% inflation when I calculated inflation in the Netherlands 9/2017 to 9/2020 based 
 # on https://www.cbs.nl/en-gb/news/2022/40/inflation-rate-up-to-14-5-percent-in-september (1.019*1.026*1.011)
 # (I chose Sept because it looks like the survey was done in Sept/Oct)
 features <- features %>%
-  mutate(nettohh_f_2020 = nettohh_f_2020*1.057)
+  mutate(nettohh_f_2020 = nettohh_f_2020*1.057,
+         nettoink_f_2020 = nettoink_f_2020*1.057)
 
 ############ STEP 3: INDICATE THAT DATA IS TIME-SHIFTED AND RENAME ID #############
 

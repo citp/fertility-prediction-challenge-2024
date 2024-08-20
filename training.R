@@ -25,11 +25,9 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
   set.seed(0)
 
   # Combine cleaned training data and outcome_df
-  model_df_2021to2023 <- merge(cleaned_train_2021to2023, outcome_2021to2023, by = "nomem_encr") %>%
-    mutate(new_child = factor(new_child))
+  model_df_2021to2023 <- merge(cleaned_train_2021to2023, outcome_2021to2023, by = "nomem_encr")
   
-  model_df_2018to2020 <- merge(cleaned_train_2018to2020, outcome_2018to2020, by = "nomem_encr") %>%
-    mutate(new_child = factor(new_child))
+  model_df_2018to2020 <- merge(cleaned_train_2018to2020, outcome_2018to2020, by = "nomem_encr")
   
   original_plus_timeshifted_model_df <- bind_rows(model_df_2021to2023, model_df_2018to2020)
   
@@ -37,15 +35,15 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
   # and mean impute everything
   recipe <- recipe(new_child ~ ., original_plus_timeshifted_model_df) %>%
     step_rm(nomem_encr, nohouse_encr) %>%
-    step_dummy(c(belbezig_2020, migration_background_bg, oplmet_2020,
-                 cf20m098, cf20m099, cf20m100,
-                 cf08a128, cf09b128, cf10c128, cf11d128, cf12e128,  
-                 cf13f128, cf14g128, cf15h128, cf16i128, cf17j128,
-                 cf18k128, cf19l128, cf20m128, 
-                 cf19l128_PartnerSurvey, cf20m128_PartnerSurvey), # Some of the *128 are binary but it varies by year, so since we are doing a time-shift, I am one-hot encoding them all for simplicity
-      one_hot = TRUE
-    ) %>%
-    step_impute_mean(everything(), -new_child)
+    step_mutate(across(c(cf18k128, cf19l128, cf20m128,
+        cf20m128_PartnerSurvey, cf19l128_PartnerSurvey,
+        belbezig_2020, oplmet_2020,
+        migration_background_bg,
+        new_child
+      ),
+      factor
+    )) %>%
+    step_dummy(all_factor_predictors(), one_hot = TRUE)
 
   # Tune an xgboost model using grid search and cross validation
   model_to_tune <- boost_tree(
@@ -91,10 +89,10 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
   
   # Grid search for hyperparameter tuning
   grid <- expand.grid(
-    mtry = c(.05, .1, .2, .3, .4, .6, .8, 1),
-    trees = c(10, 50, 100, 200),
-    tree_depth = 1:7,
-    learn_rate = c(.01, .1, .3, .5, .7, .9, 1.1)
+    mtry = c(.2, .4, .6, .8, 1),
+    trees = c(5, 10, 50, 100, 200),
+    tree_depth = 1:9,
+    learn_rate = c(.001, .003, .01, .03, .1, .3, 1)
   )
   best <- tune_grid(model_to_tune, recipe, folds,
     grid = grid,
