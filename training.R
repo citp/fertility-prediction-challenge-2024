@@ -49,7 +49,7 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
   # Tune an xgboost model using grid search and cross validation
   model_to_tune <- boost_tree(
     mode = "classification",
-    mtry = tune(), trees = tune(), tree_depth = tune(), learn_rate = tune()
+    sample_size = tune(), trees = tune(), tree_depth = tune(), learn_rate = tune()
   ) %>%
     set_engine("xgboost", counts = FALSE)
   # Set up cross-validation folds
@@ -90,10 +90,10 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
   
   # Grid search for hyperparameter tuning
   grid <- expand.grid(
-    mtry = c(.2, .4, .6, .8, 1),
-    trees = c(5, 10, 50, 100, 200),
-    tree_depth = 1:9,
-    learn_rate = c(.001, .003, .01, .03, .1, .3, 1)
+    sample_size = c(.4, .5, .6, .7, .8, .9, 1),
+    trees = c(1:150),
+    tree_depth = c(1, 2, 4, 6, 8, 10, 12),
+    learn_rate = c(.01, .03, .05, .1, .3, .5)
   )
   best <- tune_grid(model_to_tune, recipe, folds,
     grid = grid,
@@ -102,11 +102,11 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
   ) %>%
     collect_metrics() %>%
     filter(n == 5) %>%
-    arrange(desc(mean)) %>%
+    arrange(desc(mean), trees) %>%
     head(1)
   model <- boost_tree(
     mode = "classification",
-    mtry = best$mtry,
+    sample_size = best$sample_size,
     trees = best$trees,
     tree_depth = best$tree_depth,
     learn_rate = best$learn_rate

@@ -10,7 +10,7 @@ XGBoost with the following strategies: (1) Expanded sample size with "time-shift
 
 (2) For households where both partners participated in the survey, we merge in the partner's fertility intentions from 2019 and 2020 (cf19l128 to cf19l130 and cf20m128 to cf20m130), plus the partner's answers to questions about how many kids they have. 
 
-(3) We generate "scales" in the feature data by averaging related features together. Our scales are: Feelings toward current child, gendered religiosity, attitudes about traditional fertility, attitudes about traditional motherhood, attitudes about traditional fatherhood, attitudes about traditional marriage, attitudes toward working mothers, and sexism.
+(3) We generate "scales" in the feature data by averaging related features together. Our scales are: Feelings toward current child, gendered religiosity, attitudes about traditional fertility, attitudes about traditional motherhood, attitudes about traditional fatherhood, attitudes about traditional marriage, attitudes toward working mothers, and sexism. We also constructed variables for age of youngest child and household income per capita.
 
 We choose the hyperparameters for our XGBoost model via grid-search hyperparameter tuning with 5-fold cross-validation. 
 
