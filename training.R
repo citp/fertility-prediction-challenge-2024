@@ -12,15 +12,12 @@ library(tidyr)
 library(tidymodels)
 library(xgboost)
 
-train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023, 
-                             cleaned_train_2018to2020, outcome_2018to2020) {
+train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023) {
   # Trains a model using the cleaned dataframe and saves the model to a file.
 
   # Parameters (all of these are dataframes):
   # cleaned_train_2021to2023: PreFer_train_data.csv after it has gone through the clean_df function 
   # outcome_2021to2023: PreFer_train_outcome.csv 
-  # cleaned_train_2018to2020: A "time-shifted" dataframe of feature data, after it has gone through the clean_df function
-  # outcome_2018to2020: Outcome data for fertility in 2018-2020
 
   set.seed(0)
 
@@ -28,14 +25,9 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
   model_df_2021to2023 <- merge(cleaned_train_2021to2023, outcome_2021to2023, by = "nomem_encr") %>%
     mutate(new_child = factor(new_child))
   
-  model_df_2018to2020 <- merge(cleaned_train_2018to2020, outcome_2018to2020, by = "nomem_encr") %>%
-    mutate(new_child = factor(new_child))
-  
-  original_plus_timeshifted_model_df <- bind_rows(model_df_2021to2023, model_df_2018to2020)
-  
   # Set up a recipe that remove the ids, dummy-encode the categorical variables 
   # and mean impute everything
-  recipe <- recipe(new_child ~ ., original_plus_timeshifted_model_df) %>%
+  recipe <- recipe(new_child ~ ., model_df_2021to2023) %>%
     step_rm(nomem_encr, nohouse_encr) %>%
     step_mutate(across(c(cf18k128, cf19l128, cf20m128,
         cf20m128_PartnerSurvey, cf19l128_PartnerSurvey,
@@ -54,39 +46,14 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
     set_engine("xgboost", counts = FALSE)
   # Set up cross-validation folds
 
-  # Set up CV folds within the original data
+  # Set up CV folds
   n_folds <- 5
-  folds <- filter(original_plus_timeshifted_model_df, time_shifted_data == 0
-  ) %>%
+  folds <- model_df_2021to2023 %>%
     group_vfold_cv(
       group = nohouse_encr, # Puts household members in same fold as each other
       balance = "observations",
       v = n_folds
     )
-  # Within each CV fold, append time-shifted data.
-  # Note: We are appending time-shifted data here rather than prior to creating the
-  # CV folds because we only want time-shifted data in training folds, not in test folds.
-  # We then make sure that the time-shifted people we append do not come from the same
-  # households as those in the test folds
-  for (i in 1:n_folds) {
-    # Identify what index the first time-shifted observation will be placed at
-    start_index <- nrow(folds$splits[[i]][[1]]) + 1
-    # Append the time-shifted data but exclude those in the same households as
-    # in the test fold
-    test_fold <- folds$splits[[i]][[1]][-folds$splits[[i]][[2]], ]
-    folds$splits[[i]][[1]] <- bind_rows(
-      folds$splits[[i]][[1]],
-      filter(original_plus_timeshifted_model_df,
-        time_shifted_data == 1,
-        !nohouse_encr %in% test_fold$nohouse_encr
-      )
-    )
-    # Add the indices for time-shifted data to the vector of train fold indices
-    end_index <- nrow(folds$splits[[i]][[1]])
-    time_shifted_data_indices <- c(start_index:end_index)
-    folds$splits[[i]][[2]] <-
-      c(folds$splits[[i]][[2]], time_shifted_data_indices)
-  }
   
   # Grid search for hyperparameter tuning
   grid <- expand.grid(
@@ -115,7 +82,7 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
   model <- workflow() %>%
     add_model(model) %>%
     add_recipe(recipe) %>%
-    fit(original_plus_timeshifted_model_df)
+    fit(model_df_2021to2023)
 
   # Save the model
   saveRDS(model, "model.rds")

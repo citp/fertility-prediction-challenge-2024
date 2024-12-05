@@ -30,14 +30,6 @@ clean_df <- function(df, background_df) {
   # Returns:
   # data frame: The cleaned dataframe with only the necessary columns and processed variables.
 
-  #### TIME-SHIFTED DATA INDICATOR ####
-  # The time shifted data already has a column called time_shifted_data, where
-  # time_shifted_data = 1. For the regular data, we need to create time_shifted_data = 0.
-  if (!"time_shifted_data" %in% colnames(df)) {
-    df <- df %>%
-      mutate(time_shifted_data = 0)
-  }
-
   #### MERGE IN PARTNER DATA IF THE PARTNER ALSO PARTICIPATED IN THE SURVEY ####
   # Make a vector of features to merge in from the partner's survey, for use in modeling
   features_to_use_as_partner_data_in_model <- c(
@@ -120,12 +112,6 @@ clean_df <- function(df, background_df) {
   # not have all household IDs.
   background_df20 <- background_df
   
-  # If this is time-shifted data, filter the background data to 2017 and earlier
-  if(unique(df$time_shifted_data) == 1) { 
-    background_df <- background_df %>%
-      filter(wave <= 201712)
-  }
-  
   # For each person, filter to only the most recent wave in which they appeared
   background_most_recent_wave <- background_df %>%
     group_by(nomem_encr) %>%
@@ -197,7 +183,6 @@ clean_df <- function(df, background_df) {
   keepcols <- c(
     "nomem_encr", # ID variable required for predictions,
     "outcome_available", # Is there an outcome to predict?
-    "time_shifted_data", # Indicates whether this is original data or time-shifted data
     "partner_survey_available", # Indicates whether we merged in data from partner who also participated in survey
     # Savings
     "ca20g012", "ca20g013", "ca20g078",
