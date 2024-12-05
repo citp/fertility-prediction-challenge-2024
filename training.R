@@ -38,7 +38,6 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
   recipe <- recipe(new_child ~ ., original_plus_timeshifted_model_df) %>%
     step_rm(nomem_encr, nohouse_encr) %>%
     step_mutate(across(c(cf18k128, cf19l128, cf20m128,
-        cf20m128_PartnerSurvey, cf19l128_PartnerSurvey,
         belbezig_2020, oplmet_2020,
         migration_background_bg
       ),

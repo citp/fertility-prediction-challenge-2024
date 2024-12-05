@@ -38,93 +38,7 @@ clean_df <- function(df, background_df) {
       mutate(time_shifted_data = 0)
   }
 
-  #### MERGE IN PARTNER DATA IF THE PARTNER ALSO PARTICIPATED IN THE SURVEY ####
-  # Make a vector of features to merge in from the partner's survey, for use in modeling
-  features_to_use_as_partner_data_in_model <- c(
-    # Fertility expectations in 2020
-    "cf20m128", "cf20m129", "cf20m130",
-    # Fertility expectations in 2019
-    "cf19l128", "cf19l129", "cf19l130", 
-    # Whether ever had kids in 2019 and 2020
-    "cf19l454", "cf20m454", 
-    # Number of kids reported in 2019 and 2020
-    "cf19l455", "cf20m455",
-    # Birth year of first child in 2019 and 2020
-    "cf19l456", "cf20m456", 
-    # Birth year of second child in 2019 and 2020
-    "cf19l457", "cf20m457",
-    # Birth year of third child in 2019 and 2020
-    "cf19l458", "cf20m458",
-    # Birth year of fourth child in 2019 and 2020
-    "cf19l459", "cf20m459",
-    # Birth year of fifth child in 2019 and 2020
-    "cf19l460", "cf20m460",
-    # Birth year of sixth child in 2019 and 2020
-    "cf19l461", "cf20m461",
-    # Birth year of seventh child in 2019 and 2020
-    "cf19l462", "cf20m462",
-    # Birth year of eighth child in 2019 and 2020
-    "cf19l463", "cf20m463",
-    # Birth year of ninth child in 2019 and 2020
-    "cf19l464", "cf20m464",
-    # Birth year of tenth child in 2019 and 2020
-    "cf19l465", "cf20m465",
-    # Birth year of eleventh child in 2019 and 2020
-    "cf19l466", "cf20m466",
-    # Birth year of twelfth child in 2019 and 2020
-    "cf19l467", "cf20m467",
-    # Birth year of thirteenth child in 2019 and 2020
-    "cf19l468", "cf20m468",
-    # Birth year of fourteenth child in 2019 and 2020
-    "cf19l469", "cf20m469",
-    # Birth year of fifteenth child in 2019 and 2020
-    "cf19l470", "cf20m470",
-    # Gynecologist
-    "ch20m219",
-    # Birthyear
-    "birthyear_bg",
-    # Personal Income
-    "nettoink_f_2020")
-  
-  # Make vectors of features that will be coalesced across waves, for use in the merging process
-  # Note: Must list the more recent features first in order for the coalesce function to work
-  raw_features_about_living_with_partner <- c("cf20m025", "cf19l025", "cf18k025", "cf17j025", "cf16i025", "cf15h025", 
-                                              "cf14g025", "cf13f025", "cf12e025", "cf11d025", "cf10c025", "cf09b025", "cf08a025")
-  raw_features_about_partner_birth_year <- c("cf20m026", "cf19l026", "cf18k026", "cf17j026", "cf16i026", "cf15h026", 
-                                             "cf14g026", "cf13f026", "cf12e026", "cf11d026", "cf10c026", "cf09b026", "cf08a026")
-  raw_features_about_partner_gender <- c("cf20m032", "cf19l032", "cf18k032", "cf17j032", "cf16i032", "cf15h032", 
-                                         "cf14g032", "cf13f032", "cf12e032", "cf11d032", "cf10c032", "cf09b032", "cf08a032")  
-  
-  # Select a few features of interest, plus features that will help us double-check that the merged-in person is really the partner
-  train_subsetted_columns <- df %>% 
-    select("nomem_encr", 
-           "gender_bg", 
-           "outcome_available",
-           all_of(features_to_use_as_partner_data_in_model),
-           all_of(raw_features_about_living_with_partner),
-           all_of(raw_features_about_partner_birth_year), 
-           all_of(raw_features_about_partner_gender)
-    ) %>%
-    # Collect the most recent response to whether they live with a partner in a single variable 
-    mutate(live_with_partner = coalesce(!!!syms(raw_features_about_living_with_partner))) %>%
-    # Collect the most recently reported partner birth year in a single variable 
-    mutate(partner_birth_year = coalesce(!!!syms(raw_features_about_partner_birth_year))) %>%
-    # Collect the most recent indicator of partner's gender in a single variable
-    mutate(partner_gender = coalesce(!!!syms(raw_features_about_partner_gender))) %>%
-    # Remove raw data that was used in the coalesced variables
-    select(-all_of(raw_features_about_living_with_partner), 
-           -all_of(raw_features_about_partner_birth_year),
-           -all_of(raw_features_about_partner_gender))
-  
-  # Save a copy of background_df for use later. Otherwise background_df would 
-  # not have all household IDs.
-  background_df20 <- background_df
-  
-  # If this is time-shifted data, filter the background data to 2017 and earlier
-  if(unique(df$time_shifted_data) == 1) { 
-    background_df <- background_df %>%
-      filter(wave <= 201712)
-  }
+  #### NUMBER OF CHILDREN PER HOUSEHOLD, FOR CALCULATING HOUSEHOLD INCOME PER CAPITA ####
   
   # For each person, filter to only the most recent wave in which they appeared
   background_most_recent_wave <- background_df %>%
@@ -133,13 +47,6 @@ clean_df <- function(df, background_df) {
     slice_head() %>%
     ungroup()
   
-  # For merging in partner data
-  background_most_recent_wave_partner <-
-    select(
-      background_most_recent_wave,
-      nomem_encr, nohouse_encr, positie
-    )
-  
   # For calculating household income per capita
   background_most_recent_wave_aantalhh <-
     select(
@@ -147,58 +54,14 @@ clean_df <- function(df, background_df) {
       nomem_encr, aantalhh
     )
   
-  # Merge household ID and household position data with training data
-  train_subsetted_columns <- left_join(train_subsetted_columns, background_most_recent_wave_partner, by = "nomem_encr")
-  
-  # Create a copy of "train_subsetted_columns" to represent possible partners
-  train_partner <- train_subsetted_columns %>%
-    rename_with(~ paste0(., "_PartnerSurvey"), -nohouse_encr)
-  
-  # Merge train_subsetted_columns with train_partner
-  # This produces a dataframe that only contains people whose partner also responded to the survey
-  subsetted_train_linked_with_partner <- train_subsetted_columns %>%
-    left_join(train_partner, by = "nohouse_encr", relationship = "many-to-many") %>%
-    filter(
-      # Only look at partners for whom outcome is available, as this probably 
-      # has to be the case for the test set
-      outcome_available_PartnerSurvey == 1,
-      # Remove rows where person was linked to self
-      nomem_encr != nomem_encr_PartnerSurvey,
-      # Filter to only people who are head of household, wedded partner, or unwedded partner in most recent wave where they appeared
-      positie %in% c(1,2,3), 
-      positie_PartnerSurvey %in% c(1,2,3), 
-      # Filter to people from households where at least one supposed partner reported living together with a partner 
-      ((live_with_partner == 1) | (live_with_partner_PartnerSurvey ==1)),
-      # Remove rows where reported birthyears are mismatched 
-      (partner_birth_year == birthyear_bg_PartnerSurvey | is.na(partner_birth_year) | is.na(birthyear_bg_PartnerSurvey)),
-      (partner_birth_year_PartnerSurvey == birthyear_bg | is.na(partner_birth_year_PartnerSurvey) | is.na(birthyear_bg)),
-      # Remove rows where reported genders are mismatched
-      (partner_gender == gender_bg_PartnerSurvey | is.na(partner_gender) | is.na(gender_bg_PartnerSurvey)), 
-      (partner_gender_PartnerSurvey == gender_bg | is.na(partner_gender_PartnerSurvey) | is.na(gender_bg))
-    ) 
-  
-  # Select only the columns about the partner (we'll merge this into the full training data, which already has data from self)  
-  partner_variables_to_keep <- paste0(features_to_use_as_partner_data_in_model, "_PartnerSurvey")
-  subsetted_train_linked_with_partner <- subsetted_train_linked_with_partner %>%
-    select(nomem_encr, all_of(partner_variables_to_keep))
-  
-  # Merge the data about the partner with the full train data
-  # Also merge data about household size with the full train data
-  # This produces a dataframe with everyone from the training data, even if they don't have a partner
-  df <- left_join(df, subsetted_train_linked_with_partner, by = "nomem_encr") %>% 
-    left_join(background_most_recent_wave_aantalhh, by = "nomem_encr")
-  
-  # Create an indicator for whether there is partner survey data
-  ids_that_have_partner_survey <- subsetted_train_linked_with_partner$nomem_encr
-  df <- df %>%
-    mutate(partner_survey_available = ifelse(nomem_encr %in% ids_that_have_partner_survey, 1, 0))
+  # Merge data about household size with the full train data
+  df <- left_join(df, background_most_recent_wave_aantalhh, by = "nomem_encr")
   
   #### SELECT THE FEATURES FOR MODELING ####
   keepcols <- c(
     "nomem_encr", # ID variable required for predictions,
     "outcome_available", # Is there an outcome to predict?
     "time_shifted_data", # Indicates whether this is original data or time-shifted data
-    "partner_survey_available", # Indicates whether we merged in data from partner who also participated in survey
     # Savings
     "ca20g012", "ca20g013", "ca20g078",
     # Number of rooms
@@ -316,49 +179,7 @@ clean_df <- function(df, background_df) {
     # Satisfaction with relationship
     "cf19l180", "cf20m180",
     # Satisfaction with family life
-    "cf19l181", "cf20m181",
-    # Partner survey: fertility expectations in 2020
-    "cf20m128_PartnerSurvey", "cf20m129_PartnerSurvey", "cf20m130_PartnerSurvey",
-    # Partner survey: fertility expectations in 2019
-    "cf19l128_PartnerSurvey", "cf19l129_PartnerSurvey", "cf19l130_PartnerSurvey",
-    # Partner survey: whether ever had kids
-    "cf19l454_PartnerSurvey", "cf20m454_PartnerSurvey", 
-    # Partner survey: Number of kids reported in 2019 and 2020
-    "cf19l455_PartnerSurvey", "cf20m455_PartnerSurvey",
-    # Partner survey: First child birth year reported in 2019 and 2020
-    "cf19l456_PartnerSurvey", "cf20m456_PartnerSurvey",
-    # Partner survey: Second child birth year reported in 2019 and 2020
-    "cf19l457_PartnerSurvey", "cf20m457_PartnerSurvey",
-    # Partner survey: Third child birth year reported in 2019 and 2020
-    "cf19l458_PartnerSurvey", "cf20m458_PartnerSurvey",
-    # Partner survey: Fourth child birth year reported in 2019 and 2020
-    "cf19l459_PartnerSurvey", "cf20m459_PartnerSurvey",
-    # Partner survey: Fifth child birth year reported in 2019 and 2020
-    "cf19l460_PartnerSurvey", "cf20m460_PartnerSurvey",
-    # Partner survey: Sixth child birth year reported in 2019 and 2020
-    "cf19l461_PartnerSurvey", "cf20m461_PartnerSurvey",
-    # Partner survey: Seventh child birth year reported in 2019 and 2020
-    "cf19l462_PartnerSurvey", "cf20m462_PartnerSurvey",
-    # Partner survey: Eighth child birth year reported in 2019 and 2020
-    "cf19l463_PartnerSurvey", "cf20m463_PartnerSurvey",
-    # Partner survey: Ninth child birth year reported in 2019 and 2020
-    "cf19l464_PartnerSurvey", "cf20m464_PartnerSurvey",
-    # Partner survey: Tenth child birth year reported in 2019 and 2020
-    "cf19l465_PartnerSurvey", "cf20m465_PartnerSurvey",
-    # Partner survey: Eleventh child birth year reported in 2019 and 2020
-    "cf19l466_PartnerSurvey", "cf20m466_PartnerSurvey",
-    # Partner survey: Twelfth child birth year reported in 2019 and 2020
-    "cf19l467_PartnerSurvey", "cf20m467_PartnerSurvey",
-    # Partner survey: Thirteenth child birth year reported in 2019 and 2020
-    "cf19l468_PartnerSurvey", "cf20m468_PartnerSurvey",
-    # Partner survey: Fourteenth child birth year reported in 2019 and 2020
-    "cf19l469_PartnerSurvey", "cf20m469_PartnerSurvey",
-    # Partner survey: Fifteenth child birth year reported in 2019 and 2020
-    "cf19l470_PartnerSurvey", "cf20m470_PartnerSurvey",
-    # Partner survey: Birthyear
-    "birthyear_bg_PartnerSurvey",
-    # Partner survey: Gynecologist
-    "ch20m219_PartnerSurvey" # ,
+    "cf19l181", "cf20m181"
   )
 
   #### KEEP DATA WITH FEATURES SELECTED ####
@@ -404,7 +225,7 @@ clean_df <- function(df, background_df) {
       # Identify partner's birth year based on most recent wave in which it was reported
       partner_birth_year18 = ifelse(cf18k024 == 2, NA, coalesce(cf18k026, cf17j026, cf16i026, cf15h026, cf14g026, cf13f026, cf12e026, cf11d026, cf10c026, cf09b026, cf08a026)),
       partner_birth_year19 = ifelse(cf19l024 == 2, NA, coalesce(cf19l026, partner_birth_year18)),
-      partner_birth_year20 = ifelse(cf20m024 == 2, NA, coalesce(cf20m026, partner_birth_year19, birthyear_bg_PartnerSurvey)),
+      partner_birth_year20 = ifelse(cf20m024 == 2, NA, coalesce(cf20m026, partner_birth_year19)),
       # Identify year relationship began based on most recent wave in which it was reported
       year_relationship_began18 = ifelse(cf18k024 == 2, NA, coalesce(cf18k028, cf17j028, cf16i028, cf15h028, cf14g028, cf13f028, cf12e028, cf11d028, cf10c028, cf09b028, cf08a028)),
       year_relationship_began19 = ifelse(cf19l024 == 2, NA, coalesce(cf19l028, year_relationship_began18)),
@@ -414,17 +235,11 @@ clean_df <- function(df, background_df) {
       cf18k129 = ifelse(cf18k128 == 2, 0, cf18k129),
       cf19l129 = ifelse(cf19l128 == 2, 0, cf19l129),
       cf20m129 = ifelse(cf20m128 == 2, 0, cf20m129),
-      cf19l129_PartnerSurvey = ifelse(cf19l128_PartnerSurvey == 2, 0, cf19l129_PartnerSurvey),
-      cf20m129_PartnerSurvey = ifelse(cf20m128_PartnerSurvey == 2, 0, cf20m129_PartnerSurvey),
       # If no expected kids, then a lower-bound estimate for the number of years
       # within which to have kids is 31 (since the largest value actually reported is 30)
       cf18k130 = ifelse(cf18k128 == 2, 31, cf18k130),
       cf19l130 = ifelse(cf19l128 == 2, 31, cf19l130),
       cf20m130 = ifelse(cf20m128 == 2, 31, cf20m130),
-      cf19l130_PartnerSurvey = ifelse(cf19l128_PartnerSurvey == 2, 31, cf19l130_PartnerSurvey),
-      cf20m130_PartnerSurvey = ifelse(cf20m128_PartnerSurvey == 2, 31, cf20m130_PartnerSurvey),
-      # Remove some very small categories for 128 variables
-      cf20m128_PartnerSurvey = ifelse(cf20m128_PartnerSurvey == 3, NA, cf20m128_PartnerSurvey),
       # Correct a value where calendar year was reported instead of number of years
       cf20m130 = ifelse(cf20m130 == 2025, 5, cf20m130),
       # Feeling about being single
@@ -433,14 +248,10 @@ clean_df <- function(df, background_df) {
       cf20m455 = ifelse(cf20m454 == 2, 0, cf20m455),
       cf19l455 = ifelse(cf19l454 == 2, 0, cf19l455),
       cf18k455 = ifelse(cf18k454 == 2, 0, cf18k455),
-      cf20m455_PartnerSurvey = ifelse(cf20m454_PartnerSurvey == 2, 0, cf20m455_PartnerSurvey),
-      cf19l455_PartnerSurvey = ifelse(cf19l454_PartnerSurvey == 2, 0, cf19l455_PartnerSurvey),
       # Year the most recent child was born
       most_recent_child18 = coalesce(cf18k470, cf18k469, cf18k468, cf18k467, cf18k466, cf18k465, cf18k464, cf18k463, cf18k462, cf18k461, cf18k460, cf18k459, cf18k458, cf18k457, cf18k456),
       most_recent_child19 = coalesce(cf19l470, cf19l469, cf19l468, cf19l467, cf19l466, cf19l465, cf19l464, cf19l463, cf19l462, cf19l461, cf19l460, cf19l459, cf19l458, cf19l457, cf19l456),
       most_recent_child20 = coalesce(cf20m470, cf20m469, cf20m468, cf20m467, cf20m466, cf20m465, cf20m464, cf20m463, cf20m462, cf20m461, cf20m460, cf20m459, cf20m458, cf20m457, cf20m456),
-      most_recent_child19_PartnerSurvey = coalesce(cf19l470_PartnerSurvey, cf19l469_PartnerSurvey, cf19l468_PartnerSurvey, cf19l467_PartnerSurvey, cf19l466_PartnerSurvey, cf19l465_PartnerSurvey, cf19l464_PartnerSurvey, cf19l463_PartnerSurvey, cf19l462_PartnerSurvey, cf19l461_PartnerSurvey, cf19l460_PartnerSurvey, cf19l459_PartnerSurvey, cf19l458_PartnerSurvey, cf19l457_PartnerSurvey, cf19l456_PartnerSurvey),
-      most_recent_child20_PartnerSurvey = coalesce(cf20m470_PartnerSurvey, cf20m469_PartnerSurvey, cf20m468_PartnerSurvey, cf20m467_PartnerSurvey, cf20m466_PartnerSurvey, cf20m465_PartnerSurvey, cf20m464_PartnerSurvey, cf20m463_PartnerSurvey, cf20m462_PartnerSurvey, cf20m461_PartnerSurvey, cf20m460_PartnerSurvey, cf20m459_PartnerSurvey, cf20m458_PartnerSurvey, cf20m457_PartnerSurvey, cf20m456_PartnerSurvey),
       # Scale for feeling towards child
       across(c(cf20m515, cf20m516, cf20m518, cf20m519, cf20m520, cf20m521),
         ~ 8 - .x
@@ -522,8 +333,6 @@ clean_df <- function(df, background_df) {
       -cf18k470, -cf18k469, -cf18k468, -cf18k467, -cf18k466, -cf18k465, -cf18k464, -cf18k463, -cf18k462, -cf18k461, -cf18k460, -cf18k459, -cf18k458, -cf18k457, -cf18k456,
       -cf19l470, -cf19l469, -cf19l468, -cf19l467, -cf19l466, -cf19l465, -cf19l464, -cf19l463, -cf19l462, -cf19l461, -cf19l460, -cf19l459, -cf19l458, -cf19l457, -cf19l456,
       -cf20m470, -cf20m469, -cf20m468, -cf20m467, -cf20m466, -cf20m465, -cf20m464, -cf20m463, -cf20m462, -cf20m461, -cf20m460, -cf20m459, -cf20m458, -cf20m457,
-      -cf19l470_PartnerSurvey, -cf19l469_PartnerSurvey, -cf19l468_PartnerSurvey, -cf19l467_PartnerSurvey, -cf19l466_PartnerSurvey, -cf19l465_PartnerSurvey, -cf19l464_PartnerSurvey, -cf19l463_PartnerSurvey, -cf19l462_PartnerSurvey, -cf19l461_PartnerSurvey, -cf19l460_PartnerSurvey, -cf19l459_PartnerSurvey, -cf19l458_PartnerSurvey, -cf19l457_PartnerSurvey, -cf19l456_PartnerSurvey,
-      -cf20m470_PartnerSurvey, -cf20m469_PartnerSurvey, -cf20m468_PartnerSurvey, -cf20m467_PartnerSurvey, -cf20m466_PartnerSurvey, -cf20m465_PartnerSurvey, -cf20m464_PartnerSurvey, -cf20m463_PartnerSurvey, -cf20m462_PartnerSurvey, -cf20m461_PartnerSurvey, -cf20m460_PartnerSurvey, -cf20m459_PartnerSurvey, -cf20m458_PartnerSurvey, -cf20m457_PartnerSurvey, 
       -cf20m513,
       -cf20m514,
       -cf20m515,
@@ -546,7 +355,6 @@ clean_df <- function(df, background_df) {
       -cv20l130,
       -cv20l143, -cv20l144, -cv20l145, -cv20l146,
       -cv20l151, -cv20l152, -cv20l153, -cv20l154,
-      -birthyear_bg_PartnerSurvey,
       -aantalhh
     ) %>% 
     mutate(across(everything(), as.numeric))
@@ -554,7 +362,7 @@ clean_df <- function(df, background_df) {
   #### APPEND HOUSEHOLD ID ####
   # Identify the household each person was a member of at the last time that person
   # was observed, up through December 2020
-  household_linkage <- background_df20 %>% 
+  household_linkage <- background_df %>% 
     arrange(desc(wave)) %>%
     group_by(nomem_encr) %>%
     slice_head() %>%
