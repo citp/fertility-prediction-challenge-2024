@@ -30,14 +30,6 @@ clean_df <- function(df, background_df) {
   # Returns:
   # data frame: The cleaned dataframe with only the necessary columns and processed variables.
 
-  #### TIME-SHIFTED DATA INDICATOR ####
-  # The time shifted data already has a column called time_shifted_data, where
-  # time_shifted_data = 1. For the regular data, we need to create time_shifted_data = 0.
-  if (!"time_shifted_data" %in% colnames(df)) {
-    df <- df %>%
-      mutate(time_shifted_data = 0)
-  }
-
   #### NUMBER OF CHILDREN PER HOUSEHOLD, FOR CALCULATING HOUSEHOLD INCOME PER CAPITA ####
   
   # For each person, filter to only the most recent wave in which they appeared
@@ -61,7 +53,6 @@ clean_df <- function(df, background_df) {
   keepcols <- c(
     "nomem_encr", # ID variable required for predictions,
     "outcome_available", # Is there an outcome to predict?
-    "time_shifted_data", # Indicates whether this is original data or time-shifted data
     # Savings
     "ca20g012", "ca20g013", "ca20g078",
     # Number of rooms
