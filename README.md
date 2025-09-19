@@ -174,6 +174,14 @@ CODE
 	
 	
 	
+	07_feature_table.R
+	
+	This file reads data/table_a1.csv.
+	
+	This file outputs table/table_a1.tex. The table describes the features used in the winning xgboost model.
+	
+	
+	
 	08_all_preds.R
 	
 	This file reads data/intermediate_files/folds.RDS and 14 RDS files from data/intermediate_files/preds_cv. If preds_holdout == TRUE, it will also read data/PreFer_holdout_data.csv, data/PreFer_holdout_outcome.csv, data/PreFer_train_outcome.csv, 9 RDS files from data/intermediate_files/cleaned_dfs (the 9 not read by training.R), and 14 RDS files from data/intermediate_files/models
