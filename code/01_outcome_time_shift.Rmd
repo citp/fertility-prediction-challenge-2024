@@ -1,0 +1,1541 @@
+---
+title: "Creating the outcome variable for PreFer"
+author: "Original code from Lisa Sivak & Gert Stulp; edited to add time shift by Emily Cantrell"
+date: "`r Sys.Date()`"
+output:
+  html_notebook:
+    highlight: tango
+    theme: united
+    toc: yes
+    toc_depth: 2
+    toc_float: yes
+  html_document:
+    toc: yes
+    toc_depth: '2'
+    df_print: paged
+---
+
+
+The goal of this script is to arrive at the outcome variable -- having a(nother) child in 2021-2023, biological or adopted -- for the [PreFer data challenge](https://preferdatachallenge.nl). We use the following variables from the 2020-2023 Family and Household LISS Core Study: 
+
+- `cf***454`: "Did you ever have any children? With this we mean biological children (gotten with your partner or someone else) as well as stepchildren, adoptive children and foster children. Please do not include deceased children. We ask about this later."  
+
+- `cf***456` - `cf***470`: [if cf***455>0] variables containing the birth years of the children who are alive (maximum of 15). "In the table below, please enter the birth years of all these children. Include here the birth years of your own children (living at home as well as living independently), of stepchildren living at home, adoptive children and/or foster children."
+
+- `cf***098` - `cf***112` type of parent-child relation of all children reported in `cf***456` - `cf***470`. "For each child, please indicate below whether you are the biological parent, the step parent, the adoptive parent or foster parent. If you are living together with your partner's children, select the option 'step parent'". Options: 1 biological parent, 2 step parent, 3 adoptive parent, 4 foster parent. This question is asked only about alive children.
+
+- `cf***471`: whether a person has deceased child(ren). There are two versions of this question. If no deceased children were previously reported: "The following question is about children who passed away after being born. Did you ever have child(ren) who passed away after being born?"  
+If a panel member reported a deceased child before, the following version of 471 is being asked: "The following question is about children who passed away after being born. Last time you indicated that your child(ren) born in [year of birth deceased children previous wave] has/have passed away. Did you have another child/any more children who passed away after being born?" 
+
+- `cf***473` - `cf***482`: [if cf***472>0] variables containing the birth years of the children who are deceased (maximum of 10). "What is the year of birth of your deceased child(ren)?". If no deceased children were previously reported, all deceased children should be listed here. If deceased children WERE previously reported, only birth years of new deceased children should be listed here.
+
+
+We also use information from earlier waves -- 2015-2019 -- in several specific cases. If the number of children is available only for some years in 2020-2023 (for example, only for 2021-2023), this number of children is non-zero and stays the same during these years but it is missing in 2020, we cannot establish the outcome, because we don't know when these children were born (or adopted). These children could have been born (or adopted) in 2021-2023 (outcome would be 1) or they could have been born or adopted before 2021 (outcome would be 0). Without information from before 2021 we don't know when a person got these children. Sometimes people are not reporting in a particular wave but then resume participating in a later wave. So for some people, who missed the 2020 wave, the information about the number of children is available in 2019. We can compare if the number of children was the same in 2019 as in 2021-2023; if it's the same we can assume that there were no new children in 2021-2023. So, we use information from the last year before 2020, for which information about children is not missing, only in these specific cases, and only to potentially change the outcome from NA to 0. We cannot change the outcome from NA to 1 if the number of children is lower in 2019, because this child might have been born or adopted in 2020.  
+
+We use the same variables from waves 2015-2019 to calculate the number of children as from waves 2020-2023. The questions were the same.     
+
+We do not use information from even earlier waves (2008-2014; note that the Family & Household survey was not held in 2007) in constructing our outcome, because questions about children were asked in a different way. Note that there is only one respondent for whom the information from earlier years could help: this individual participated in waves 2008-2009 and between 2021 and 2023, but did not participate between 2010-2020, so we are missing only one outcome in this respect.
+
+
+## Packages
+
+```{r setup, message = FALSE}
+start <- Sys.time()
+# install.packages("groundhog")
+library(groundhog)
+groundhog.library(c("knitr", "tidyverse", "haven", "data.table"), "2024-04-23")
+# data.table for fread
+opts_knit$set(root.dir = "..")
+```
+
+## Data
+```{r}
+# Emily's note: Lisa's code also included variables from 2021-2023; I remove references to those
+# variables from here forward (those are the outcome years we ultimately want to predict)
+
+# storing vectors of names of variables
+has_children_vars <- c("cf15h454", "cf16i454", "cf17j454", 
+                       "cf18k454", "cf19l454", "cf20m454")
+
+number_children_vars <- c("cf15h455", "cf16i455", "cf17j455", 
+                          "cf18k455", "cf19l455", "cf20m455")
+
+# birth years of ONLY ALIVE CHILDREN
+birthyears_children_2015 <- paste0("cf15h", 456:470) # birthyear variables 2015
+birthyears_children_2016 <- paste0("cf16i", 456:470) # birthyear variables 2016
+birthyears_children_2017 <- paste0("cf17j", 456:470) # birthyear variables 2017
+birthyears_children_2018 <- paste0("cf18k", 456:470) # birthyear variables 2018
+birthyears_children_2019 <- paste0("cf19l", 456:470) # birthyear variables 2019
+birthyears_children_2020 <- paste0("cf20m", 456:470) # birthyear variables 2020
+
+birthyears_children_vars <- c(
+  birthyears_children_2015, birthyears_children_2016, birthyears_children_2017, 
+  birthyears_children_2018, birthyears_children_2019, birthyears_children_2020)
+
+# Type of parent-child relationship: biological child (1), step child (2), adopted (3), foster(4)
+type_parent_2015 <- c(paste0("cf15h0", 98:99), paste0("cf15h", 100:112)) 
+type_parent_2016 <- c(paste0("cf16i0", 98:99), paste0("cf16i", 100:112)) 
+type_parent_2017 <- c(paste0("cf17j0", 98:99), paste0("cf17j", 100:112)) 
+type_parent_2018 <- c(paste0("cf18k0", 98:99), paste0("cf18k", 100:112)) 
+type_parent_2019 <- c(paste0("cf19l0", 98:99), paste0("cf19l", 100:112)) 
+type_parent_2020 <- c(paste0("cf20m0", 98:99), paste0("cf20m", 100:112)) 
+
+type_parent <- c(type_parent_2015, type_parent_2016, type_parent_2017, 
+                 type_parent_2018, type_parent_2019, type_parent_2020)
+
+# Variables on deceased children 
+children_deceased <- c( "cf15h471", "cf16i471", "cf17j471", 
+                        "cf18k471", "cf19l471", "cf20m471")
+number_deceased <- c("cf15h472", "cf16i472", "cf17j472", 
+                     "cf18k472", "cf19l472", "cf20m472")
+
+# birth years deceased children
+deceased_children_2015 <- paste0("cf15h", 473:482) # birth years of deceased children 2015 
+deceased_children_2016 <- paste0("cf16i", 473:482) # birth years of deceased children 2016
+deceased_children_2017 <- paste0("cf17j", 473:482) # birth years of deceased children 2017
+deceased_children_2018 <- paste0("cf18k", 473:482) # birth years of deceased children 2018
+deceased_children_2019 <- paste0("cf19l", 473:482) # birth years of deceased children 2019
+deceased_children_2020 <- paste0("cf20m", 473:482) # birth years of deceased children 2020
+
+deceased_children_vars <- c(
+  deceased_children_2015, deceased_children_2016, deceased_children_2017, 
+  deceased_children_2018, deceased_children_2019, deceased_children_2020)
+
+# variables needed to get a cumulative list of birth years of all deceased children by a certain year (e.g. birth years of all deceased children reported up to and including 2015). We need a cumulative list because of how the questions about deceased children are asked (e.g. if in 2015 a deceased child was reported, this child - normally - should not appear in the following waves) 
+
+# in 2015 people reported all deceased children, so we don't need another variable
+# # all variables about birth years of deceased children in 2015-2016
+deceased_children_by2016 <- c(deceased_children_2015, deceased_children_2016)
+ # all variables about birth years of deceased children in 2015-2016 + 2017
+deceased_children_by2017 <- c(deceased_children_by2016, deceased_children_2017)
+# all variables about birth years of deceased children in 2015-2017 + 2018
+deceased_children_by2018 <- c(deceased_children_by2017, deceased_children_2018) 
+# all variables about birth years of deceased children in 2015-2018 + 2019 
+deceased_children_by2019 <- c(deceased_children_by2018, deceased_children_2019) 
+# all variables about birth years of deceased children in 2015-2019 + 2020
+deceased_children_by2020 <- c(deceased_children_by2019, deceased_children_2020)
+
+
+#########Lisa: load here the data that contains the variables from Family&Household 2008-2020
+# e.g. training data + supplementary training data that we provided 
+
+# Emily: Read in the data
+train_data <- read.csv('data/PreFer_train_data.csv')
+supplementary_data <- read.csv('data/PreFer_train_supplementary_data.csv')
+
+# Emily: filter to just the relevant columns (Lisa had slightly different code to do this)
+train_data <- train_data %>%
+  select(all_of(c("nomem_encr", has_children_vars, number_children_vars,
+                  birthyears_children_vars, type_parent, 
+                  children_deceased, number_deceased, deceased_children_vars, 
+                  "birthyear_bg")))
+supplementary_data <- supplementary_data %>%
+    select(all_of(c("nomem_encr", has_children_vars, number_children_vars,
+                  birthyears_children_vars, type_parent, 
+                  children_deceased, number_deceased, deceased_children_vars, 
+                  "birthyear_bg")))
+
+# Emily: merge the dataframes together (Lisa had slightly different code to do this) 
+# Note: the two dataframes have all the same columns, with different people 
+data <- full_join(train_data, supplementary_data)
+
+# Emily: Quality control checks
+nrow(data) == nrow(train_data) + nrow(supplementary_data)
+ncol(train_data) == ncol(supplementary_data)
+ncol(data) == ncol(train_data)
+```
+
+
+## Overview of steps needed to calculate outcome
+To calculate the outcome, we need the number of biological and adopted children (alive and deceased) for each year 2020-2023, and additionally - for each year 2015-2019. 
+
+### Workflow calculating the overal number of children
+1. For each year, get a list of birth years of all biological children and all adopted children (plus, for checking, also of foster and step children and of all alive children overall)   
+2. For each year, get a cumulative list of birth years of all deceased children. We need a cumulative list because of how the questions about deceased children are asked (e.g. if in 2015 a deceased child was reported, this child -- if respondents had truly followed the questionnaires -- should not appear in the following waves).     
+3. Based on the number of birth years of biological, adopted, and deceased children, calculate the overall number of children for each year. Note: type of relationship is not available for deceased children - this question is not asked. Given that the majority of children in the data (~95%) are reported as biological children, we will count all deceased children (~4% of respondents reported one or more deceased children) as biological. An alternative solution could be that we check what was the relation to deceased children in previous waves -- when they were reported among alive children -- and then only count those deceased children who were biological or adopted. But some children were never reported among alive: 1) if they passed away before the person began participating in LISS studies, 2) if they passed away shortly after birth (between periods of field work) -- before the person could report them among alive children. For example, there are 8 cases when people report a deceased child born in 2021-2023 and this child is never reported among alive children. So, there is no data about the type of relation to this child in the previous waves. But it is very likely that these are biological children (given the birth years and also given that biological children are ~95% of all children in this data). If we do not take into account all deceased children for whom the information about the relation is not available from previous years, we lose information about the outcome for several people. That is why we count all deceased children as biological. 
+
+### Workflow calculating whether people have children
+We also need information on respondents who have 0 alive children (because when someone does not report birth years it doesn't necessarily mean not having alive children - respondents might have missed the questions about birth years). For each year, we calculate a variable about having alive children:    
+
+ - if respondent reports having no alive children (`cf***454` is 2) -- than the number of alive children is 0,     
+ - if respondent reports having alive children (`cf***454` is 1)  -- than the number of alive children is certainly not zero, and we record that this respondent has alive children       
+ - if information about having alive children is missing (`cf***454` is NA) in year X but in 2023 a person 1) reports not ever having children who are now alive (`cf23p454` is 2), 2) never reports having alive children in the 2015-2023 waves in which this person participated, 3) does not have deceased children (list of birth years of deceased children, that we constructed, is empty), then we assume that the number of alive children in year X is 0.  
+ - in all other cases - NA (missing value).
+
+### Workflow calculating whether people had deceased children
+In the case of deceased children, we assume that if information about them is missing - the number of deceased children is zero.
+
+
+
+## Check how people report types of relations
+
+Before making the lists of birth years (to calculate total amount of children) we check inconsistencies in how people report types of relations. Here we check if people report type of relations inconsistently -- e.g. in one wave a person reports that he is a biological parent but in the next wave that he is an adoptive parent of the same child. We look only at relations to children which were at least once reported as biological or adopted. We assume that a biological relation cannot change into something else -- if a child was at least once reported as biological, we assume that all other values are errors and we change all other types of relations reported into biological. When a child who is reported at some point as an adopted child but in an earlier wave is reported as a foster child (or step child), it is not clear whether we should impute relations, because it may depend on how people understand "adopted"; also a foster child probably can become adopted.   
+
+Workflow:   
+We look at N-th child (first children, then second, etc.). We identify all cases when the type of relations with this N-th child changes across waves while birth year stays the same. Here we assume that this is the same child (sometimes different children are reported as e.g. "first child" - for example, in 2020 a stepchild born in 2000 was reported as first child, but in 2021 this stepchild is not listed among the children anymore (e.g. she/he moved out; in case of step-children, respondents are asked to take into account living-at-home step children) and another child born in 2001 is now the first child). 
+
+Among them, we select only cases when a child was at least once reported as biological. And for all these IDs we replace the types of relations with the N-th child to 1 (biological). Concerning adopted children, we only calculate the number of such cases when the relation was 3 in some waves and not 3 in other wave.  
+
+Note: sometimes the order of children change, e.g. a person got an older step-child), so ideally we should compare types of relations to children with the same birth year, not the same position. But these cases are harder to identify -- we need to get the relation to a child with a specific birth year, not specific position. We assume that such cases are rare (based on the number of cases we see below) and can be ignored.  
+
+
+```{r}
+# in the code below the following values refer to the following "types" of children
+# 1 - biological, 2 - step, 3 - adopted, 4 - foster
+
+# First child
+# getting a list of variables from different waves with a type of relations to the first child
+types_1child <- c("cf15h098","cf16i098","cf17j098",
+                  "cf18k098","cf19l098","cf20m098")
+# birth years of first child
+birthyears_1child <- c("cf15h456","cf16i456","cf17j456",
+                       "cf18k456","cf19l456","cf20m456")
+
+examine1 <- data %>% 
+  mutate(
+    # get types of relations with the first child across waves
+    types = pmap(select(., all_of(types_1child)), function(...) as.numeric(na.omit(c(...)))),
+    # get all birth years of the first child across waves
+    birthyears = pmap(select(., all_of(birthyears_1child)), function(...) as.numeric(na.omit(c(...))))) %>%
+  rowwise %>%
+  mutate(
+    # number of unique types of relations
+    unique_types = length(unique(types)),
+    # number of unique birth years
+    unique_birthyears = length(unique(birthyears))) %>%
+  # select only cases when the birth year is the same but the type of relations changes
+  filter(unique_birthyears == 1 & unique_types > 1) %>%
+  select(nomem_encr, types, birthyears, unique_types, unique_birthyears)
+
+# select only cases when changes concerned biological children or adopted children                        
+examine1_1 <- examine1 %>% filter(1 %in% types) # 22 cases
+examine1_3 <- examine1 %>% filter(3 %in% types & !1 %in% types) # 2 cases
+
+# Second child
+# getting list of variables from different waves with a type of relations with the second child
+types_2child <- c("cf15h099","cf16i099","cf17j099",
+                  "cf18k099","cf19l099","cf20m099")
+# birth years of second child
+birthyears_2child <- c("cf15h457","cf16i457","cf17j457",
+                       "cf18k457","cf19l457","cf20m457")
+
+examine2 <- data %>% 
+  mutate(
+    # get types of relations with the first child across waves
+    types = pmap(select(., all_of(types_2child)), function(...) as.numeric(na.omit(c(...)))),
+    # get all birth years of the first child across waves
+    birthyears = pmap(select(., all_of(birthyears_2child)), function(...) as.numeric(na.omit(c(...))))) %>%
+  rowwise %>%
+  mutate(
+    # number of unique types of relations
+    unique_types = length(unique(types)),
+    # number of unique birth years
+    unique_birthyears = length(unique(birthyears))) %>%
+  # select only cases when the birth year is the same but the type of relations changes
+  filter(unique_birthyears == 1 & unique_types > 1) %>%
+  select(nomem_encr, types, birthyears, unique_types, unique_birthyears)
+
+# select only cases when changes concerned biological children or adopted children                        
+examine2_1 <- examine2 %>% filter(1 %in% types) # 15 cases
+examine2_3 <- examine2 %>% filter(3 %in% types & !1 %in% types) # 2 cases
+
+# Third child
+# getting list of variables from different waves with a type of relations with the third child
+types_3child <- c("cf15h100","cf16i100","cf17j100",
+                  "cf18k100","cf19l100","cf20m100")
+# birth years of third child
+birthyears_3child <- c("cf15h458","cf16i458","cf17j458",
+                       "cf18k458","cf19l458","cf20m458")
+
+examine3 <- data %>% 
+  mutate(
+    # get types of relations with the first child across waves
+    types = pmap(select(., all_of(types_3child)), function(...) as.numeric(na.omit(c(...)))),
+    # get all birth years of the first child across waves
+    birthyears = pmap(select(., all_of(birthyears_3child)), function(...) as.numeric(na.omit(c(...))))) %>%
+  rowwise %>%
+  mutate(
+    # number of unique types of relations
+    unique_types = length(unique(types)),
+    # number of unique birth years
+    unique_birthyears = length(unique(birthyears))) %>%
+  # select only cases when the birth year is the same but the type of relations changes
+  filter(unique_birthyears == 1 & unique_types > 1) %>%
+  select(nomem_encr, types, birthyears, unique_types, unique_birthyears)
+
+# select only cases when changes concerned biological children or adopted children                        
+examine3_1 <- examine3 %>% filter(1 %in% types) # 8 cases
+examine3_3 <- examine3 %>% filter(3 %in% types & !1 %in% types) # 0 cases
+
+# Fourth child
+# getting list of variables form different waves with a type of relations with the fourth child
+types_4child <- c("cf15h101","cf16i101","cf17j101",
+                  "cf18k101","cf19l101","cf20m101")
+# birth years of fourth child
+birthyears_4child <- c("cf15h459","cf16i459","cf17j459",
+                       "cf18k459","cf19l459","cf20m459")
+
+examine4 <- data %>% 
+  mutate(
+    # get types of relations with the first child across waves
+    types = pmap(select(., all_of(types_4child)), function(...) as.numeric(na.omit(c(...)))),
+    # get all birth years of the first child across waves
+    birthyears = pmap(select(., all_of(birthyears_4child)), function(...) as.numeric(na.omit(c(...))))) %>%
+  rowwise %>%
+  mutate(
+    # number of unique types of relations
+    unique_types = length(unique(types)),
+    # number of unique birth years
+    unique_birthyears = length(unique(birthyears))) %>%
+  # select only cases when the birth year is the same but the type of relations changes
+  filter(unique_birthyears == 1 & unique_types > 1) %>%
+  select(nomem_encr, types, birthyears, unique_types, unique_birthyears)
+
+# select only cases when changes concerned biological children or adopted children                        
+examine4_1 <- examine4 %>% filter(1 %in% types) # 4 cases
+examine4_3 <- examine4 %>% filter(3 %in% types & !1 %in% types) # 1 case
+
+# Fifth child
+# getting list of variables form different waves with a type of relations with the fifth child
+types_5child <- c("cf15h102","cf16i102","cf17j102",
+                  "cf18k102","cf19l102","cf20m102")
+# birth years of first child
+birthyears_5child <- c("cf15h460","cf16i460","cf17j460",
+                       "cf18k460","cf19l460","cf20m460")
+
+examine5 <- data %>% 
+  mutate(
+    # get types of relations with the first child across waves
+    types = pmap(select(., all_of(types_5child)), function(...) as.numeric(na.omit(c(...)))),
+    # get all birth years of the first child across waves
+    birthyears = pmap(select(., all_of(birthyears_5child)), function(...) as.numeric(na.omit(c(...))))) %>%
+  rowwise %>%
+  mutate(
+    # number of unique types of relations
+    unique_types = length(unique(types)),
+    # number of unique birth years
+    unique_birthyears = length(unique(birthyears))) %>%
+  # select only cases when the birth year is the same but the type of relations changes
+  filter(unique_birthyears == 1 & unique_types > 1) %>%
+  select(nomem_encr, types, birthyears, unique_types, unique_birthyears)
+
+# select only cases when changes concerned biological children or adopted children                        
+examine5_1 <- examine5 %>% filter(1 %in% types) # 3 cases
+examine5_3 <- examine5 %>% filter(3 %in% types & !1 %in% types) # 0 cases
+
+
+# With 6th child there are 0 cases with inconsistencies
+
+# some people report different types of relations to several children - here we calculate overall how many people reported different relations to one or several children - who were at least once reported as biological
+num_changing_types <- unique(examine1_1$nomem_encr, examine2_1$nomem_encr,
+                             examine3_1$nomem_encr, examine4_1$nomem_encr,
+                             examine5_1$nomem_encr) # 22 people
+```
+
+*(From Lisa regarding the true outcome data)* There are overall 22 people who reported different types of relations to the same children who were at least once reported as biological. These changes are unlikely or impossible (e.g. from biological to step). We assume these are errors in filling out the survey and we count children as biological if they were reported as biological at least once. We replace all other values with 1 for these identified cases. Although on rare occasions "1" looks like an error - see e.g. id XXXXXX in "examine1_1" - reported relations are 2,1,2,2.  
+
+Adopted: there are only 5 cases of inconsistencies among adopted children. In 2 of them changes seem plausible - from foster child to adopted child. We will not change anything in all these 5 cases.    
+
+*Emily's note: In the data from 2020 and earlier, there are 9 people who reported different types of relations to the same children who were at least once reported as biological. We follow the same procedure as Lisa for handling these cases.*
+
+
+```{r}
+# replacing: for these identified cases, change the type of relation to 1, if the type was not missing in this wave
+data2 <- data %>%
+    mutate(across(all_of(types_1child), 
+              ~ if_else((nomem_encr %in% examine1$nomem_encr) & !is.na(.), 1, .)),
+           across(all_of(types_2child), 
+              ~ if_else((nomem_encr %in% examine2$nomem_encr) & !is.na(.), 1, .)),
+           across(all_of(types_3child), 
+              ~ if_else((nomem_encr %in% examine3$nomem_encr) & !is.na(.), 1, .)),
+           across(all_of(types_4child), 
+              ~ if_else((nomem_encr %in% examine4$nomem_encr) & !is.na(.), 1, .)),
+           across(all_of(types_5child), 
+              ~ if_else((nomem_encr %in% examine5$nomem_encr) & !is.na(.), 1, .)))
+
+# Checks if it went well
+# table(data2$cf20m098,data$cf20m098, useNA="always")
+# table(data2$cf19l098,data$cf19l098, useNA="always")
+# table(data2$cf18k098,data$cf18k098, useNA="always")
+# table(data2$cf17j098,data$cf17j098, useNA="always")
+# table(data2$cf16i098,data$cf16i098, useNA="always")
+# table(data2$cf15h098,data$cf15h098, useNA="always")
+```
+
+ 
+## Calculating variables (part 1)
+
+### Get lists of birth years 
+
+Here we get lists of birth years: of all alive children, of biological/adopted/other children separately, and also birth years of deceased children (cumulatively for the latter).
+
+```{r}
+data2 <- data2 %>%
+  mutate( 
+    # 2015
+    # list all birthyears of children
+    all_birthyears_2015 = pmap(select(., all_of(birthyears_children_2015)), 
+                               function(...) as.numeric(na.omit(c(...)))), 
+    # list all types of relationships
+    relationships_2015 = pmap(select(., all_of(type_parent_2015)), 
+                              function(...) as.numeric(na.omit(c(...)))),
+    # list birth years of biological children
+    bio_birthyears_2015 = map2(all_birthyears_2015, relationships_2015, 
+                               function(x, y) x[y == 1]), # 1 = biological
+    # list birth years of adopted children
+    adopted_birthyears_2015 = map2(all_birthyears_2015, relationships_2015, 
+                                   function(x, y) x[y == 3]), # 3 = adopted
+    # list birth years of all other children
+    other_birthyears_2015 = map2(all_birthyears_2015, relationships_2015, 
+                                 function(x, y) x[y == 2 | y == 4]), # 2 = step, 4 = foster
+    # list birth years of deceased children 
+    dec_birthyears_2015 = pmap(select(., all_of(deceased_children_2015)), 
+                               function(...) as.numeric(na.omit(c(...)))),
+    
+    # 2016
+    # list all birthyears of children
+    all_birthyears_2016 = pmap(select(., all_of(birthyears_children_2016)), 
+                               function(...) as.numeric(na.omit(c(...)))), 
+    # list all types of relationships
+    relationships_2016 = pmap(select(., all_of(type_parent_2016)), 
+                              function(...) as.numeric(na.omit(c(...)))),
+    # list birth years of biological children
+    bio_birthyears_2016 = map2(all_birthyears_2016, relationships_2016, 
+                               function(x, y) x[y == 1]), # 1 = biological
+    # list birth years of adopted children
+    adopted_birthyears_2016 = map2(all_birthyears_2016, relationships_2016, 
+                                   function(x, y) x[y == 3]), # 3 = adopted
+    # list birth years of all other children
+    other_birthyears_2016 = map2(all_birthyears_2016, relationships_2016, 
+                                 function(x, y) x[y == 2 | y == 4]), # 2 = step, 4 = foster
+    # list birth years of deceased children !!! cumulative
+    dec_birthyears_2016 = pmap(select(., all_of(deceased_children_by2016)), 
+                               function(...) as.numeric(na.omit(c(...)))),
+    
+    # 2017
+    # list all birthyears of children
+    all_birthyears_2017 = pmap(select(., all_of(birthyears_children_2017)), 
+                               function(...) as.numeric(na.omit(c(...)))),  
+    # list all types of relationships
+    relationships_2017 = pmap(select(., all_of(type_parent_2017)), 
+                              function(...) as.numeric(na.omit(c(...)))),
+    # list birth years of biological children
+    bio_birthyears_2017 = map2(all_birthyears_2017, relationships_2017, 
+                               function(x, y) x[y == 1]), # 1 = biological
+    # list birth years of adopted children
+    adopted_birthyears_2017 = map2(all_birthyears_2017, relationships_2017, 
+                                   function(x, y) x[y == 3]), # 3 = adopted
+    # list birth years of all other children
+    other_birthyears_2017 = map2(all_birthyears_2017, relationships_2017, 
+                                 function(x, y) x[y == 2 | y == 4]), # 2 = step, 4 = foster
+    # list birth years of deceased children !!! cumulative
+    dec_birthyears_2017 = pmap(select(., all_of(deceased_children_by2017)), 
+                               function(...) as.numeric(na.omit(c(...)))),
+    
+    # 2018
+    # list all birthyears of children
+    all_birthyears_2018 = pmap(select(., all_of(birthyears_children_2018)),
+                               function(...) as.numeric(na.omit(c(...)))), 
+    # list all types of relationships
+    relationships_2018 = pmap(select(., all_of(type_parent_2018)), 
+                              function(...) as.numeric(na.omit(c(...)))),
+    # list birth years of biological children
+    bio_birthyears_2018 = map2(all_birthyears_2018, relationships_2018, 
+                               function(x, y) x[y == 1]), # 1 = biological
+    # list birth years of adopted children
+    adopted_birthyears_2018 = map2(all_birthyears_2018, relationships_2018, 
+                                   function(x, y) x[y == 3]), # 3 = adopted
+    # list birth years of all other children
+    other_birthyears_2018 = map2(all_birthyears_2018, relationships_2018, 
+                                 function(x, y) x[y == 2 | y == 4]), # 2 = step, 4 = foster
+    # list birth years of deceased children !!! cumulative
+    dec_birthyears_2018 = pmap(select(., all_of(deceased_children_by2018)), 
+                               function(...) as.numeric(na.omit(c(...)))),
+    
+    # 2019
+    # list all birthyears of children
+    all_birthyears_2019 = pmap(select(., all_of(birthyears_children_2019)), 
+                               function(...) as.numeric(na.omit(c(...)))),  
+    # list all types of relationships
+    relationships_2019 = pmap(select(., all_of(type_parent_2019)), 
+                              function(...) as.numeric(na.omit(c(...)))),
+    # list birth years of biological children
+    bio_birthyears_2019 = map2(all_birthyears_2019, relationships_2019, 
+                               function(x, y) x[y == 1]), # 1 = biological
+    # list birth years of adopted children
+    adopted_birthyears_2019 = map2(all_birthyears_2019, relationships_2019, 
+                                   function(x, y) x[y == 3]), # 3 = adopted
+    # list birth years of all other children
+    other_birthyears_2019 = map2(all_birthyears_2019, relationships_2019, 
+                                 function(x, y) x[y == 2 | y == 4]), # 2 = step, 4 = foster
+    # list birth years of deceased children !!! cumulative
+    dec_birthyears_2019 = pmap(select(., all_of(deceased_children_by2019)), 
+                               function(...) as.numeric(na.omit(c(...)))),
+    
+    # 2020
+    # list all birthyears of children
+    all_birthyears_2020 = pmap(select(., all_of(birthyears_children_2020)), 
+                               function(...) as.numeric(na.omit(c(...)))), 
+    # list all types of relationships
+    relationships_2020 = pmap(select(., all_of(type_parent_2020)), 
+                              function(...) as.numeric(na.omit(c(...)))),
+    # list birth years of biological children
+    bio_birthyears_2020 = map2(all_birthyears_2020, relationships_2020, 
+                               function(x, y) x[y == 1]), # 1 = biological
+    # list birth years of adopted children
+    adopted_birthyears_2020 = map2(all_birthyears_2020, relationships_2020, 
+                                   function(x, y) x[y == 3]), # 3 = adopted
+    # list birth years of all other children
+    other_birthyears_2020 = map2(all_birthyears_2020, relationships_2020, 
+                                 function(x, y) x[y == 2 | y == 4]), # 2 = step, 4 = foster
+    # list birth years of deceased children !!! cumulative
+    dec_birthyears_2020 = pmap(select(., all_of(deceased_children_by2020)), 
+                               function(...) as.numeric(na.omit(c(...))))
+    )
+```
+
+### Calculating number of all alive, biological, adopted children, and relations reported
+
+We will need these numbers in the subsequent sections. Instead of calculating the numbers of biological/adopted/all children and all relations reported, we could just use the length of a list of biological/adopted/all children/relations, but it makes the code less readable.  
+
+If there were no birth years/relations reported we now have "numeric(0)" values, which turn into zeros when we calculate the length of the list with birth years/relations (length(numeric(0)) = 0). We replace these cases with NA because some of these empty lists of birth years mean zero children, but some mean that the questions about birth years or relations had missing values. 
+
+```{r}
+data2 <- data2 %>%
+  rowwise() %>%
+  mutate( 
+    # 2015
+    # number alive
+    num_alive_2015 = ifelse(length(all_birthyears_2015)>0, length(all_birthyears_2015), NA),  
+    # number relationships reported
+    num_relationships_2015 = ifelse(length(relationships_2015)>0, length(relationships_2015), NA),
+    # list birth years of biological children
+    num_bio_2015 = ifelse(length(bio_birthyears_2015)>0, length(bio_birthyears_2015), NA), 
+    # list birth years of adopted children
+    num_adopted_2015 = ifelse(length(adopted_birthyears_2015)>0, length(adopted_birthyears_2015), NA),
+    # num other children
+    num_other_2015 = ifelse(length(other_birthyears_2015)>0, length(other_birthyears_2015), NA), 
+    
+    # 2016
+    # number alive
+    num_alive_2016 = ifelse(length(all_birthyears_2016)>0, length(all_birthyears_2016), NA),  
+    # number relationships reported
+    num_relationships_2016 = ifelse(length(relationships_2016)>0, length(relationships_2016), NA),
+    # list birth years of biological children
+    num_bio_2016 = ifelse(length(bio_birthyears_2016)>0, length(bio_birthyears_2016), NA), 
+    # list birth years of adopted children
+    num_adopted_2016 = ifelse(length(adopted_birthyears_2016)>0, length(adopted_birthyears_2016), NA),
+    # num other children
+    num_other_2016 = ifelse(length(other_birthyears_2016)>0, length(other_birthyears_2016), NA), 
+    
+    # 2017
+    # number alive
+    num_alive_2017 = ifelse(length(all_birthyears_2017)>0, length(all_birthyears_2017), NA),  
+    # number relationships reported
+    num_relationships_2017 = ifelse(length(relationships_2017)>0, length(relationships_2017), NA),
+    # list birth years of biological children
+    num_bio_2017 = ifelse(length(bio_birthyears_2017)>0, length(bio_birthyears_2017), NA), 
+    # list birth years of adopted children
+    num_adopted_2017 = ifelse(length(adopted_birthyears_2017)>0, length(adopted_birthyears_2017), NA),
+    # num other children
+    num_other_2017 = ifelse(length(other_birthyears_2017)>0, length(other_birthyears_2017), NA), 
+    
+    # 2018
+    # number alive
+    num_alive_2018 = ifelse(length(all_birthyears_2018)>0, length(all_birthyears_2018), NA),  
+    # number relationships reported
+    num_relationships_2018 = ifelse(length(relationships_2018)>0, length(relationships_2018), NA),
+    # list birth years of biological children
+    num_bio_2018 = ifelse(length(bio_birthyears_2018)>0, length(bio_birthyears_2018), NA), 
+    # list birth years of adopted children
+    num_adopted_2018 = ifelse(length(adopted_birthyears_2018)>0, length(adopted_birthyears_2018), NA),
+    # num other children
+    num_other_2018 = ifelse(length(other_birthyears_2018)>0, length(other_birthyears_2018), NA), 
+    
+    # 2019
+    # number alive
+    num_alive_2019 = ifelse(length(all_birthyears_2019)>0, length(all_birthyears_2019), NA),  
+    # number relationships reported
+    num_relationships_2019 = ifelse(length(relationships_2019)>0, length(relationships_2019), NA),
+    # list birth years of biological children
+    num_bio_2019 = ifelse(length(bio_birthyears_2019)>0, length(bio_birthyears_2019), NA), 
+    # list birth years of adopted children
+    num_adopted_2019 = ifelse(length(adopted_birthyears_2019)>0, length(adopted_birthyears_2019), NA),
+    # num other children
+    num_other_2019 = ifelse(length(other_birthyears_2019)>0, length(other_birthyears_2019), NA), 
+    
+    # 2020
+    # number alive
+    num_alive_2020 = ifelse(length(all_birthyears_2020)>0, length(all_birthyears_2020), NA),  
+    # number relationships reported
+    num_relationships_2020 = ifelse(length(relationships_2020)>0, length(relationships_2020), NA),
+    # list birth years of biological children
+    num_bio_2020 = ifelse(length(bio_birthyears_2020)>0, length(bio_birthyears_2020), NA), 
+    # list birth years of adopted children
+    num_adopted_2020 = ifelse(length(adopted_birthyears_2020)>0, length(adopted_birthyears_2020), NA),
+    # num other children
+    num_other_2020 = ifelse(length(other_birthyears_2020)>0, length(other_birthyears_2020), NA)) %>%
+  ungroup()
+
+# checking
+# examine <- data2 %>% 
+#   select(#all_birthyears_2015, bio_birthyears_2015, all_birthyears_2016, bio_birthyears_2016,
+#          #all_birthyears_2017, bio_birthyears_2017, all_birthyears_2018, bio_birthyears_2018,
+#          #all_birthyears_2019, bio_birthyears_2019, 
+#          #all_birthyears_2020, bio_birthyears_2020)
+
+# examining if numbers of children are plausible - everything looks plausible
+# table(data2$num_alive_2020, useNA = "always")
+# table(data2$num_alive_2019, useNA = "always")
+# table(data2$num_alive_2018, useNA = "always")
+# table(data2$num_alive_2017, useNA = "always")
+# table(data2$num_alive_2016, useNA = "always")
+# table(data2$num_alive_2015, useNA = "always")
+
+```
+
+
+### Calculate whether respondents had (alive) children 
+
+For each year, we calculate a variable about having alive children:    
+ - if respondent reports having no alive children (`cf***454` is 2) -- than the number of alive children is 0,     
+ - if respondent reports having alive children (`cf***454` is 1) -- than the number of alive children is certainly not zero, and we record that this respondent has alive children       
+ - if information about having alive children is missing (`cf***454` is NA) in year X but in 2023 a person 1) reports not ever having children who are now alive (`cf23p454` is 2), 2) never reports having alive children in all 2015-2023 waves, 3) does not have deceased children (list of birth years of deceased children, that we constructed, is empty), then we assume that the number of alive children in year X is 0. 
+
+```{r}
+data2 <- data2 %>%
+  rowwise %>%
+  mutate(
+    has_alive_child_2015 = case_when(
+      # when never had children (who are now alive) 
+      cf15h454 == 2 ~ 0, 
+      # when have alive children
+      cf15h454 == 1 ~ 1,
+      # Emily: if in 2020 said that never had children (who are now alive), never reported having children, and never reported deceased children
+      # Emily: Lisa's calculation was "if in 2023" rather than "if in 2020" 
+      cf20m454 == 2 & !cf16i454 %in% 1 & !cf17j454 %in% 1 &  # `! %in% 1` is used here instead of just ` != 1` because if a value is missing ` != 1` gives NA instead of `True`
+      !cf18k454 %in% 1 & !cf19l454 %in% 1 & 
+      length(dec_birthyears_2020) == 0 ~ 0,
+      # in all other cases 
+      TRUE ~ NA_real_),
+    
+    has_alive_child_2016 = case_when(
+      # when never had children (who are now alive) 
+      cf16i454 == 2  ~ 0, 
+      # when have alive children
+      cf16i454 == 1 ~ 1,
+      # if in *2020* said that never had children (who are now alive), never reported having children, and never reported deceased children
+      cf20m454 == 2 & !cf15h454 %in% 1 & !cf17j454 %in% 1 &  
+      !cf18k454 %in% 1 & !cf19l454 %in% 1 & 
+      length(dec_birthyears_2020) == 0 ~ 0,
+      # in all other cases 
+      TRUE ~ NA_real_),
+    
+    has_alive_child_2017 = case_when(
+      # when never had children (who are now alive) 
+      cf17j454 == 2 ~ 0, 
+      # when have alive children
+      cf17j454 == 1 ~ 1,
+      # if in *2020* said that never had children (who are now alive), never reported having children, and never reported deceased children
+      cf20m454 == 2 & !cf15h454 %in% 1 & !cf16i454 %in% 1 &  
+      !cf18k454 %in% 1 & !cf19l454 %in% 1 & 
+      length(dec_birthyears_2020) == 0 ~ 0,     
+      # in all other cases 
+      TRUE ~ NA_real_),
+    
+    has_alive_child_2018 = case_when(
+      # when never had children (who are now alive) 
+      cf18k454 == 2 ~ 0, 
+      # when have alive children
+      cf18k454 == 1 ~ 1,
+      # if in *2020* said that never had children (who are now alive), never reported having children, and never reported deceased children
+      cf20m454 == 2 & !cf15h454 %in% 1 & !cf16i454 %in% 1 &  
+      !cf17j454 %in% 1 & !cf19l454 %in% 1 & 
+      length(dec_birthyears_2020) == 0 ~ 0,
+      # in all other cases 
+      TRUE ~ NA_real_),
+    
+    has_alive_child_2019 = case_when(
+      # when never had children (who are now alive) 
+      cf19l454 == 2 ~ 0, 
+      # when have alive children
+      cf19l454 == 1 ~ 1,
+      # if in *2020* said that never had children (who are now alive), never reported having children, and never reported deceased children
+      cf20m454 == 2 & !cf15h454 %in% 1 & !cf16i454 %in% 1 &  
+      !cf17j454 %in% 1 & !cf18k454 %in% 1 & 
+      length(dec_birthyears_2020) == 0 ~ 0,      
+      # in all other cases 
+      TRUE ~ NA_real_),
+    
+    has_alive_child_2020 = case_when(
+      # when never had children (who are now alive) 
+      cf20m454 == 2 ~ 0, 
+      # when have alive children
+      cf20m454 == 1 ~ 1,
+      # in all other cases 
+      TRUE ~ NA_real_)
+    ) %>% 
+  ungroup()
+
+# checks
+#table(data2$has_alive_child_2020, useNA = "always")
+#table(data2$has_alive_child_2019, useNA = "always")
+#table(data2$has_alive_child_2018, useNA = "always")
+#table(data2$has_alive_child_2017, useNA = "always")
+```
+
+
+## Examining inconsistencies in people reporting about children
+
+### When people say thay have children but do not report birthyears
+
+```{r eval = FALSE}
+examine1 <- data2 %>% filter(cf20m454 == 1 & is.na(num_alive_2020)) %>% 
+  select(cf20m454, cf20m455, has_alive_child_2020, all_of(birthyears_children_2020))  # 8 people 
+
+# check the reported number of children and the number of birth years 
+# table(data2$cf20m455, data2$num_alive_2020, useNA ="always")
+```
+
+
+There are a few people in each wave who first report having children (`cf***454`) but then do not report their birth years (which is why the number of birth years of alive children - `num_alive_****` that we calculated - is NA). In most of these cases, birth years of children are missing because respondents say that they have 0 children (in `cf***455`) even though they report having alive children (in `cf***454`) - this could be for example if stepchildren moved out (because `cf***454` asks about all children including step-children not living-at-home but `cf***455` asks only about living-at-home step-children). If number of children is 0, questions about birth years are not asked. One person did not answer the question about the number of children so the question about birth years was also not asked.There are also 2 people who said that they have several children (2 and 3) but then missed questions about birth years of children.  
+
+
+### When people report birthyears but not types of relationship
+
+Only a few people did not report the type of relation.  
+
+```{r eval = FALSE}
+examine1 <- data2 %>% 
+  filter(num_alive_2020 >= 1 & is.na(num_relationships_2020))   # 2 people did not report type of relationships
+```
+
+### Check how people report on deceased children
+```{r eval = FALSE}
+examine <- data2 %>% 
+  # selecting only people who reported having deceased child/ren at least once in 2015-2023
+  filter(cf15h471 == 1 | cf16i471 == 1 | cf17j471 == 1 | cf18k471 == 1 | cf19l471 == 1 | 
+           cf20m471 == 1) %>% 
+  select(nomem_encr, dec_birthyears_2015, #all_birthyears_2015,
+         dec_birthyears_2016, #all_birthyears_2016, 
+         dec_birthyears_2017, #all_birthyears_2017, 
+         dec_birthyears_2018, #all_birthyears_2018,
+         dec_birthyears_2019, #all_birthyears_2019, 
+         dec_birthyears_2020, #all_birthyears_2020,
+         )  %>% 
+  # calculating the number of birth years of deceased children
+  rowwise %>%
+  mutate(n_birthyears_reported = length(unlist(dec_birthyears_2020))) %>%
+  ungroup()
+
+# table(examine$n_birthyears_reported)
+# sum(table(examine$n_birthyears_reported > 1))
+# table(examine$n_birthyears_reported > 1)
+
+
+# there are 9 people who reported 5+ deceased children, one of them reported having 210 children - we exclude this case below 
+examine2 <- examine %>% filter(n_birthyears_reported>=5)
+
+
+# check how many deceased children were reported as foster or step children, before they passed away -- we could exclude them and not take into account when calculating the number of biological and adopted children
+# but there is only a couple of cases when deceased children appeared among step/foster. So we will not exclude anyone
+
+list_step_foster <- c("other_birthyears_2015", "other_birthyears_2016", "other_birthyears_2017",
+                      "other_birthyears_2018", "other_birthyears_2019")
+
+examine <- data2 %>%
+  # selecting only people who reported having deceased child/ren at least once in 2015-2023
+  filter((cf15h471 == 1 | cf16i471 == 1 | cf17j471 == 1 | cf18k471 == 1 | cf19l471 == 1 |
+           cf20m471 == 1)) %>%
+  # calculating if the birth year of a deceased child appeared among step or foster children
+  mutate(all_step_foster = pmap(
+    select(., all_of(list_step_foster)),
+    function(...)  as.numeric(na.omit(c(...)))),
+    in_step_foster = map2(dec_birthyears_2020, all_step_foster, function(x,y) x %in% y)) %>%
+  # selecting variables to check
+  select(nomem_encr, dec_birthyears_2020, all_step_foster,in_step_foster)
+```
+
+*(Notes from Lisa based on the full data)* There are 464 people who reported having deceased child/ren at least once in 2015-2023. Nine of those did not report any birthyears. 308 respondents only reported one birth year of a deceased child (and did that only once).    
+
+There are 147 people who reported more than one birth year of deceased child(ren) - e.g. reported two birth years in the same wave or in different waves. Some of these cases seem problematic: people report deceased child(ren) with the same birth year(s) in several waves. It is very likely a misunderstanding of the question `cf***471`: if people already reported a deceased child in previous waves, in this question they are asked if they have another deceased child. They shouldn't report all deceased children. 
+
+Because of these problems it is better to count unique birth years of deceased children instead of counting the number of all reported birth years. We choose this, because it could happen that the number of children in 2021-2023 increases only because people reports a birthyear of a (likely) previously deceased child. If the number of alive children (at one point in that same time range) does not similarly increase, the outcome cannot be 1. 
+
+In some cases when people report having several deceased child(ren) with the same birth year in only one wave it is probably NOT a mistake, and if we count only unique birth years, the number of deceased children will be underestimated. In most cases this is not problematic, however, because the most important point in constructing the outcome is to detect an increase in the number of children over time (e.g., birthyears added). This situation can only be problematic when participants got a new child in 2021-2023 with the same birth year as a previously deceased child and this child dies shortly afterwards (and because of that is never reported among alive children). In this way, the newly born and early deceased child will not be counted if we count only unique birth years. Such situations seem very unlikely.    
+
+Another hypothetical problematic situation (relevant only to people who reported deceased children in 2021-2023): somebody got twins e.g. in 2020, but in 2021 both of them have deceased (in this case the overall number of children (alive + deceased) this year will be 1, not 2, because we counted unique birth years). If after that a person had another child in 2023, the summed number of children will now be 2 - the same number as in 2020. So, if we compare the number of children in 2023 and 2020, the outcome will be 0, but it should be 1. We could compare the numbers across all the years in order to calculate the outcome (e.g. compare 2021 to 2020, 2022 to 2021 and to 2020, etc.) but instead we check manually if there are cases like that (we check this below, and there are no such cases). 
+
+Last: in one case (id XXXXXX) respondent reported having 210 deceased children, and then entered 1900 and 2000 birth years of these children many times. We exclude the number of deceased children for this person because this looks like this person was just filling out this questions randomly.  
+
+```{r eval = FALSE}
+# checking if there are cases described above - when people get several children with the same birth year but then they both pass away
+examine <- data2 %>%
+  rowwise %>%
+  # selecting only people who reported having deceased child/ren at least once in *2018-2020* (Emily's edit)
+  # (In Lisa's code, it was 2021-2023)
+  filter((cf18k471 == 1 | cf19l471 == 1 | cf20m471 == 1) &
+           # and who reported having several children with the same birth year
+           (length(unique(bio_birthyears_2017)) < num_bio_2017 | 
+            length(unique(bio_birthyears_2018)) < num_bio_2018 |
+            length(unique(bio_birthyears_2019)) < num_bio_2019 |
+            length(unique(bio_birthyears_2020)) < num_bio_2020)) %>% 
+  select(nomem_encr, 
+         bio_birthyears_2017, bio_birthyears_2018, bio_birthyears_2019, bio_birthyears_2020, dec_birthyears_2017, 
+         dec_birthyears_2018, dec_birthyears_2019, dec_birthyears_2020)  
+
+# Lisa: there are 6 cases when people had several children with the same birth years and then reported deceased child(ren), but in none of this cases the outcome would be affected by counting only the number of unique birth years of deceased children
+# Emily: in the earlier data I am examining, there is only 1 case like this
+
+# checking how many cases are there when people report deceased children born in *2018-2020*, who never appeared among alive children (i.e. for how many people we would not get the outcome if only count deceased children who appeared among alive children before -- and for whom we can get the type of relations)
+examine <- data2 %>%
+  rowwise %>%
+  # selecting only people who reported having deceased child/ren at least once in 2021-2023
+  filter((cf18k471 == 1 | cf19l471 == 1 | cf20m471 == 1) &
+           (2017 %in% dec_birthyears_2020 | 
+            2018 %in% dec_birthyears_2020 |
+            2019 %in% dec_birthyears_2020 |
+            2020 %in% dec_birthyears_2020)) %>% 
+  select(nomem_encr, 
+         all_birthyears_2017, all_birthyears_2018, all_birthyears_2019, all_birthyears_2020, dec_birthyears_2017,
+         dec_birthyears_2018, dec_birthyears_2019, dec_birthyears_2020)
+
+# Lisa: there are 9 cases, when people reported deceased children with birth year 2021/2022/2023, in 8 of them this child did not appear among alive children in previous waves. Because of that, for these 8 children we cannot identify the type of relation. But we shouldn't exclude these birth years of deceased children even though we cannot identify the type of relation, because very likely they are biological children (because 95% children reported in these datasets are biological)
+# Emily: in the earlier data I am examining, there are 7 cases like this
+```
+
+## Calculating variables (part 2) 
+
+### Calculating number of unique birth years of deceased children
+```{r}
+data2 <- data2 %>%
+  rowwise() %>%
+  mutate( 
+    dec_birthyears_2015u = list(unique(dec_birthyears_2015)),
+    dec_birthyears_2016u = list(unique(dec_birthyears_2016)),
+    dec_birthyears_2017u = list(unique(dec_birthyears_2017)),
+    dec_birthyears_2018u = list(unique(dec_birthyears_2018)),
+    dec_birthyears_2019u = list(unique(dec_birthyears_2019)),
+    dec_birthyears_2020u = list(unique(dec_birthyears_2020)),
+    
+    # calculating unique number of birthyears
+    num_dec_2015 = length(dec_birthyears_2015u),
+    num_dec_2016 = length(dec_birthyears_2016u),
+    num_dec_2017 = length(dec_birthyears_2017u),
+    num_dec_2018 = length(dec_birthyears_2018u),
+    num_dec_2019 = length(dec_birthyears_2019u),
+    num_dec_2020 = length(dec_birthyears_2020u)
+  ) %>% ungroup()
+```
+
+
+### Calculating the overall numbers of biological and adopted children + deceased 
+
+Overall logic:  
+The number of biological and adopted children (`num_bio_****` and `num_adopted_***`) is now either non-zero (if people reported one or several birth years of biological or adopted children) or it is missing. It can be missing because it is 0. Or it is missing because information from one or several questions is missing:   
+1) a person missed the question about having alive children,      
+2) a person reports having alive children but does not report birth years,       
+3) a person reports birth years but then does not report types of relationships.        
+
+In all other cases, if `num_bio_****` or `num_adopted_***` is missing - it is zero. Based on that we construct the function for calculating the overall number of children.  
+
+Note: the number of deceased children for each wave is either 0 or >0, and never missing. Because we assume that if no deceased children are reported, there are none.  
+
+```{r}
+# function that calculates the overall number for a given year
+num_children <- function(data, year){
+   
+   # creating variable names
+   has_alive_child <- paste("has_alive_child_", year, sep = "")
+   num_alive <- paste("num_alive_", year, sep = "")
+   num_relationships <- paste("num_relationships_", year, sep = "")
+   num_bio <- paste("num_bio_", year, sep = "")
+   num_adopted <- paste("num_adopted_", year, sep = "")
+   num_dec <- paste("num_dec_", year, sep = "")
+   
+   data <- data %>%
+     mutate(
+       alive_plus_deceased = case_when(
+        # if info about having alive children is missing - NA 
+        # (no matter if deceased children are reported or not)
+        is.na(.data[[has_alive_child]]) ~ NA_real_,
+        # if has no alive children and no deceased - 0
+        .data[[has_alive_child]] == 0 & .data[[num_dec]] == 0 ~ 0,  
+        # if has no alive children and missing deceased (assuming if it's missing it's zero) - 0
+        .data[[has_alive_child]] == 0 & is.na(.data[[num_dec]]) ~ 0,
+        # if has no alive children and has deceased children - number of deceased children
+        .data[[has_alive_child]] == 0 & !is.na(.data[[num_dec]]) ~ .data[[num_dec]],
+        
+        ## below it concerns people reported having (1 or more) alive children 
+        # if no birth years of alive children are reported - 
+        # e.g. people report having children but then do not report birth years
+        is.na(.data[[num_alive]]) ~ NA_real_,
+        # if type of relationship is missing - NA 
+        is.na(.data[[num_relationships]]) ~ NA_real_,
+        
+        ### at this point if a number of biological or adopted children is missing - it is zero
+        # when there are no biological children but there are adopted - count only adopted
+        is.na(.data[[num_bio]]) & !is.na(.data[[num_adopted]]) ~ .data[[num_adopted]],
+        # when there are no adopted children but there are biological- count only biological
+        !is.na(.data[[num_bio]]) & is.na(.data[[num_adopted]]) ~ .data[[num_bio]],
+        # when there are no biological and no adopted children - count deceased children. 
+        # and if deceased children is 0 then the result is 0
+        is.na(.data[[num_bio]]) & is.na(.data[[num_adopted]]) ~ .data[[num_dec]],
+        # when no biological, no adopted children, and no deceased children - 0
+        .data[[num_bio]] == 0 & .data[[num_adopted]] == 0 & .data[[num_dec]] == 0 ~ 0,
+        # in all other cases, sum number of birth years of biological, adopted, and deceased children 
+        TRUE ~ .data[[num_bio]] + .data[[num_adopted]] + .data[[num_dec]])
+     ) 
+   return(data$alive_plus_deceased)   
+ }
+
+data2 <- data2 %>%
+  mutate(alive_plus_deceased_2015 = num_children(., 2015),
+         alive_plus_deceased_2016 = num_children(., 2016),
+         alive_plus_deceased_2017 = num_children(., 2017),
+         alive_plus_deceased_2018 = num_children(., 2018),
+         alive_plus_deceased_2019 = num_children(., 2019),
+         alive_plus_deceased_2020 = num_children(., 2020))
+
+# checks
+# table(data2$alive_plus_deceased_2023, useNA = "always")
+# table(data2$alive_plus_deceased_2022, useNA = "always")
+```
+
+
+### Calculate the latest pre-2017 non-missing value
+*Emily: In Lisa's code, it was the latest pre-2020 non-missing value*
+```{r}
+# reverse columns order and take the first (i.e. closest to 2017) non-missing value
+data2 <- data2 |> 
+  mutate(alive_plus_deceased_pre2017 = coalesce(alive_plus_deceased_2016, 
+                                                alive_plus_deceased_2015))
+
+# examine <- data2 %>% select(alive_plus_deceased_pre2020, alive_plus_deceased_2019, alive_plus_deceased_2018, alive_plus_deceased_2017, alive_plus_deceased_2016, alive_plus_deceased_2015)
+```
+
+### Calculate if a person has biological or adopted children born in 2021-2023
+
+*Lisa:* In some specific cases (see branch [25] in the hard-coded decision tree below) we use information whether a person has biological or adopted children born in 2021-2023 to calculate the outcome. Here we calculate the maximum birth year of children -- if it is at least 2021 it means that a person had a child born in 2021-2023.
+
+*Emily: I'm doing the same as Lisa, but with data 3 years earlier (2018-2020).*
+
+```{r}
+list_birthyears <- c("bio_birthyears_2018", "bio_birthyears_2019", 
+                     "bio_birthyears_2020", "adopted_birthyears_2018",
+                     "adopted_birthyears_2019", "adopted_birthyears_2020")
+
+
+data2 <- data2 %>% 
+  mutate(birthyear_youngest_20 = pmap_dbl(
+    select(., all_of(list_birthyears)), 
+    function(...)  ifelse(length(unlist(c(...))) == 0, NA, max(unlist(c(...)))) )
+  )
+
+
+# check if "birthyear_youngest_20" is correctly calculated
+# examine <- data2 %>% select(birthyear_youngest_20, bio_birthyears_2018, bio_birthyears_2019, bio_birthyears_2020) %>% 
+#   arrange(desc(birthyear_youngest_20))
+```
+
+## Calculate the outcome variable
+[some cases when the outcome should be NA are not included here because case_when() will assign NA to this cases in the end anyway]
+
+### Emily's notes
+
+In the code below, I refer to the years using the following format: 
+- year_tm1 = "t minus one" - the year before the first year of the outcome window
+- year_t = first year of outcome window (e.g., 2021 for the "true" outcome which is measured 2021-2023)
+- year_tp1 = "t plus one" - second year of outcome window 
+
+Lisa's code named specific years. I edited the code by replacing the years as follows, so that different years can be fed into the code via a function:
+- 2019 -> year_tm2
+- 2020 -> year_tm1
+- 2021 -> year_t
+- 2022 -> year_tp1
+- 2023 -> year_tp2
+
+**Current limitation to Emily's code:** birthyear_youngest_20 (which is generated above and used below) and alive_plus_deceased_pre2017 are made specifically for the outcome window 2018-2020. If we want other outcome windows, we need versions of birthyear_youngest_20 and alive_plus_deceased_pre2017 that generalize to other years. 
+
+```{r}
+# Create function to calculate the outcome for 3-year period with start year t
+# See the note on current limitation above: this can only be used with year_t=2018 right now
+calculate_outcome <- function(year_t) { 
+  # Calculate the other years with reference to year t 
+  year_tm2 <- year_t - 2
+  year_tm1 <- year_t - 1
+  year_tp1 <- year_t + 1
+  year_tp2 <- year_t + 2
+  # Rename columns for the indicated years using the "year t" syntax
+  temporary_data2 <- data2 %>%
+    rename(alive_plus_deceased_year_tm2 = !!sym(paste0("alive_plus_deceased_", year_tm2)),
+           alive_plus_deceased_year_tm1 = !!sym(paste0("alive_plus_deceased_", year_tm1)),
+           alive_plus_deceased_year_t = !!sym(paste0("alive_plus_deceased_", year_t)),
+           alive_plus_deceased_year_tp1 = !!sym(paste0("alive_plus_deceased_", year_tp1)),
+           alive_plus_deceased_year_tp2 = !!sym(paste0("alive_plus_deceased_", year_tp2))
+           )
+  # Outcome calculation code from Lisa, edited to use "year t" syntax
+  temporary_data2 <- temporary_data2 %>%
+    mutate(new_child = case_when(
+      
+      ### Year_tm1 not missing ###
+      
+      # Year_t higher than year_tm1
+      alive_plus_deceased_year_t > alive_plus_deceased_year_tm1 ~ 1, # THE END [1]
+      # year_tp1 higher than year_tm1, year_t same as year_tm1
+      alive_plus_deceased_year_t <= alive_plus_deceased_year_tm1 & 
+        alive_plus_deceased_year_tp1 > alive_plus_deceased_year_tm1 ~ 1, # THE END [2]
+      # year_tp2 higher than year_tm1, [year_t, year_tp1] same as year_tm1
+      alive_plus_deceased_year_t <= alive_plus_deceased_year_tm1 & 
+        alive_plus_deceased_year_tp1 <= alive_plus_deceased_year_tm1 & 
+        alive_plus_deceased_year_tp2 > alive_plus_deceased_year_tm1 ~ 1, # THE END [3]
+      # [year_tp2, year_tp1, year_t] same as year_tm1
+      alive_plus_deceased_year_t <= alive_plus_deceased_year_tm1 & 
+        alive_plus_deceased_year_tp1 <= alive_plus_deceased_year_tm1 & 
+        alive_plus_deceased_year_tp2 <= alive_plus_deceased_year_tm1 ~ 0, # THE END [4]
+      # year_tp2 missing, [year_tp1, year_t] same as year_tm1
+      alive_plus_deceased_year_t <= alive_plus_deceased_year_tm1 & 
+        alive_plus_deceased_year_tp1 <= alive_plus_deceased_year_tm1 & 
+        is.na(alive_plus_deceased_year_tp2) ~ NA_real_, # THE END [5]
+      # year_tp2 higher than year_tm1, year_tp1 missing
+      alive_plus_deceased_year_t <= alive_plus_deceased_year_tm1 & 
+        is.na(alive_plus_deceased_year_tp1) & 
+        alive_plus_deceased_year_tp2 > alive_plus_deceased_year_tm1 ~ 1, # THE END [6]
+      # [year_tp2] same as year_tm1, year_tp1 missing
+      alive_plus_deceased_year_t <= alive_plus_deceased_year_tm1 & 
+        is.na(alive_plus_deceased_year_tp1) & 
+        alive_plus_deceased_year_tp2 <= alive_plus_deceased_year_tm1 ~ 0, # THE END [7]
+      # year_t same as year_tm1, [year_tp1, year_tp2] missing
+      alive_plus_deceased_year_t <= alive_plus_deceased_year_tm1 & 
+        is.na(alive_plus_deceased_year_tp1) & 
+        is.na(alive_plus_deceased_year_tp2) ~ NA_real_, # THE END [8]
+      # year_tp1 higher than year_tm1, year_t missing
+      !is.na(alive_plus_deceased_year_tm1) & 
+        is.na(alive_plus_deceased_year_t) & 
+        alive_plus_deceased_year_tp1 > alive_plus_deceased_year_tm1 ~ 1, # THE END [9]
+      # year_tp2 higher than year_tm1, year_tp1 same as year_tm1, year_t missing
+      !is.na(alive_plus_deceased_year_tm1) & 
+        is.na(alive_plus_deceased_year_t) & 
+        alive_plus_deceased_year_tp1 <= alive_plus_deceased_year_tm1 & 
+        alive_plus_deceased_year_tp2 > alive_plus_deceased_year_tm1 ~ 1, # THE END [10]
+      # [year_tp2, year_tp1] same as year_tm1, year_t missing
+      !is.na(alive_plus_deceased_year_tm1) & 
+        is.na(alive_plus_deceased_year_t) & 
+        alive_plus_deceased_year_tp1 <= alive_plus_deceased_year_tm1 & 
+        alive_plus_deceased_year_tp2 <= alive_plus_deceased_year_tm1 ~ 0, # THE END [11]
+      # year_tp1 same as year_tm1, [year_tp2, year_t] missing    
+      !is.na(alive_plus_deceased_year_tm1) & 
+        is.na(alive_plus_deceased_year_t) & 
+        alive_plus_deceased_year_tp1 <= alive_plus_deceased_year_tm1 & 
+        is.na(alive_plus_deceased_year_tp2) ~ NA_real_, # THE END [12]
+      # year_tp2 higher than year_tm1, [year_tp1, year_t] missing
+      !is.na(alive_plus_deceased_year_tm1) & 
+        is.na(alive_plus_deceased_year_t) & 
+        is.na(alive_plus_deceased_year_tp1) & 
+        alive_plus_deceased_year_tp2 > alive_plus_deceased_year_tm1 ~ 1, # THE END [13]
+      # year_tp2 same as year_tm1, [year_tp1, year_t] missing    
+      !is.na(alive_plus_deceased_year_tm1) & 
+        is.na(alive_plus_deceased_year_t) & 
+        is.na(alive_plus_deceased_year_tp1) & 
+        alive_plus_deceased_year_tp2 <= alive_plus_deceased_year_tm1 ~ 0, # THE END [14]
+      # [year_tp2, year_tp1, year_t] missing    
+      !is.na(alive_plus_deceased_year_tm1) & 
+        is.na(alive_plus_deceased_year_t) & 
+        is.na(alive_plus_deceased_year_tp1) & 
+        is.na(alive_plus_deceased_year_tp2) ~ NA_real_, # THE END [15]
+      
+      # year_tm1 is missing
+      
+      # year_tp1 higher than year_t, year_tm1 is missing
+      is.na(alive_plus_deceased_year_tm1) & 
+        !is.na(alive_plus_deceased_year_t) & 
+        alive_plus_deceased_year_tp1 > alive_plus_deceased_year_t ~ 1, # THE END [16]
+      # year_tp2 higher than year_t, year_tp1 same as year_t, year_tm1 is missing
+      is.na(alive_plus_deceased_year_tm1) & 
+        !is.na(alive_plus_deceased_year_t) & 
+        alive_plus_deceased_year_tp1 <= alive_plus_deceased_year_t & 
+        alive_plus_deceased_year_tp2 > alive_plus_deceased_year_t ~ 1, # THE END [17]
+      # year_tp2 same as year_t, year_tp1 same as year_t, year_tm1 is missing, birthyear youngest >=year_t
+      is.na(alive_plus_deceased_year_tm1) & 
+        !is.na(alive_plus_deceased_year_t) & 
+        alive_plus_deceased_year_tp1 <= alive_plus_deceased_year_t & 
+        alive_plus_deceased_year_tp2 <= alive_plus_deceased_year_t &
+        birthyear_youngest_20 >= year_t ~ 1, # THE END [18]
+      # year_t same as year_tm2-, [year_tp2, year_tp1] same as year_t, year_tm1 is missing
+      # PREyear_tm1 waves are used below. We assume that the outcome is 0 if in years before year_tm1 the number of children was the same as in year_t. Otherwise a person could have had a child in year_t - but we don't know that so we cannot establish the outcome and it would be NA
+      is.na(alive_plus_deceased_year_tm1) & 
+        !is.na(alive_plus_deceased_year_t) & 
+        alive_plus_deceased_year_tp1 <= alive_plus_deceased_year_t & 
+        alive_plus_deceased_year_tp2 <= alive_plus_deceased_year_t & 
+        alive_plus_deceased_year_t == alive_plus_deceased_pre2017 ~ 0, #THE END [19] 
+      # year_tp1 same as year_t, [year_tp2, year_tm1] missing, birthyear youngest >=year_t
+      is.na(alive_plus_deceased_year_tm1) & 
+        !is.na(alive_plus_deceased_year_t) & 
+        alive_plus_deceased_year_tp1 <= alive_plus_deceased_year_t & 
+        is.na(alive_plus_deceased_year_tp2) &
+        birthyear_youngest_20 >= year_t ~ 1, # THE END [20]
+      # year_tp1 same as year_t, [year_tp2, year_tm1] missing, NO birth years >=year_t
+      is.na(alive_plus_deceased_year_tm1) & 
+        !is.na(alive_plus_deceased_year_t) & 
+        alive_plus_deceased_year_tp1 <= alive_plus_deceased_year_t & 
+        is.na(alive_plus_deceased_year_tp2) ~ NA_real_, # THE END [21]
+      # year_tp2 higher than year_t, [year_tp1, year_tm1] missing
+      is.na(alive_plus_deceased_year_tm1) & 
+        !is.na(alive_plus_deceased_year_t) & 
+        is.na(alive_plus_deceased_year_tp1) & 
+        alive_plus_deceased_year_tp2 > alive_plus_deceased_year_t ~ 1, # THE END [22]
+      # year_tp2 same as year_t, [year_tp1, year_tm1] missing, birthyear youngest >=year_t
+      is.na(alive_plus_deceased_year_tm1) & 
+        !is.na(alive_plus_deceased_year_t) & 
+        is.na(alive_plus_deceased_year_tp1) & 
+        alive_plus_deceased_year_tp2 <= alive_plus_deceased_year_t & 
+        birthyear_youngest_20 >= year_t ~ 1, # THE END [23] 
+      # year_t same as year_tm2-, year_tp2 same as year_t, [year_tp1, year_tm1] missing, no birthyears in year_t-year_tp2 reported
+      # PREyear_tm1 waves are used here. We assume that the outcome is 0 if in years before year_tm1 the number of children was the same as in year_t. Otherwise a person could have had a child in year_t - but we don't know that so we cannot establish the outcome and it would be NA
+      is.na(alive_plus_deceased_year_tm1) & 
+        !is.na(alive_plus_deceased_year_t) & 
+        is.na(alive_plus_deceased_year_tp1) & 
+        alive_plus_deceased_year_tp2 <= alive_plus_deceased_year_t & 
+        alive_plus_deceased_year_t == alive_plus_deceased_pre2017 ~ 0, # THE END [24] 
+      # year_t has number, [year_tm1, year_tp1, year_tp2] are missing, birthyear youngest >=year_t
+      is.na(alive_plus_deceased_year_tm1) & 
+        !is.na(alive_plus_deceased_year_t) & 
+        is.na(alive_plus_deceased_year_tp1) &
+        is.na(alive_plus_deceased_year_tp2) & 
+        birthyear_youngest_20 >= year_t ~ 1, # THE END [25] 
+      
+      # year_tm1-year_t are missing
+      
+      # year_tp2 higher than year_tp1, [year_t, year_tm1] missing
+      is.na(alive_plus_deceased_year_tm1) & 
+        is.na(alive_plus_deceased_year_t) & 
+        alive_plus_deceased_year_tp2 > alive_plus_deceased_year_tp1 ~ 1, # THE END [26] 
+      # year_tp2 same as year_tp1, [year_t, year_tm1] missing, birthyear youngest >=year_t
+      is.na(alive_plus_deceased_year_tm1) & 
+        is.na(alive_plus_deceased_year_t) & 
+        alive_plus_deceased_year_tp2 <= alive_plus_deceased_year_tp1 &
+        birthyear_youngest_20 >= year_t ~ 1, # THE END [27] 
+      # year_tp1 same as year_tm2-, year_tp2 same as year_tp1, [year_t, year_tm1] missing
+      # PREyear_tm1 waves are used here. We assume that the outcome is 0 if in years before year_tm1 the number of children was the same as in year_tp1. Otherwise a person could have had a child in year_t-year_tp1 - but we don't know that so we cannot establish the outcome and it would be NA
+      is.na(alive_plus_deceased_year_tm1) & 
+        is.na(alive_plus_deceased_year_t) & 
+        alive_plus_deceased_year_tp2 <= alive_plus_deceased_year_tp1 & 
+        alive_plus_deceased_year_tp1 == alive_plus_deceased_pre2017 ~ 0, # THE END [28] 
+      
+      # [year_tp2, year_t, year_tm1] missing, in year_tp1 birthyear >= year_t
+      is.na(alive_plus_deceased_year_tm1) & 
+        is.na(alive_plus_deceased_year_t) & 
+        !is.na(alive_plus_deceased_year_tp1) & 
+        is.na(alive_plus_deceased_year_tp2) &
+        birthyear_youngest_20 >= year_t ~ 1, # THE END [29]
+      
+      # [year_tp2, year_t, year_tm1] missing, in year_tp1 report no children with birth years in year_t-year_tp1
+      is.na(alive_plus_deceased_year_tm1) & 
+        is.na(alive_plus_deceased_year_t) & 
+        !is.na(alive_plus_deceased_year_tp1) & 
+        is.na(alive_plus_deceased_year_tp2) &
+       birthyear_youngest_20 < year_t ~ NA_real_, # THE END [30]
+      
+      
+      # year_tm1-year_tp1 are missing
+      
+      # in year_tp2 birthyear >= year_t, [year_tp1, year_t, year_tm1] missing
+      # Condition based on birth years is added  - otherwise we cannot establish the outcome here. 
+      is.na(alive_plus_deceased_year_tm1) & 
+        is.na(alive_plus_deceased_year_t) & 
+        is.na(alive_plus_deceased_year_tp1) & 
+        #alive_plus_deceased_year_tp2 > alive_plus_deceased_preyear_tm1 &  !!! Lisa: we don't need this condition here
+        birthyear_youngest_20 >= year_t ~ 1, # THE END [31] 
+      
+        # year_tp2 same as year_tm2-, [year_tp1, year_t, year_tm1] missing
+        # PREyear_tm1 waves are used here. We assume that the outcome is 0 if in years before year_tm1 the number of children was the same as in year_tp2 Otherwise a person could have had a child in year_t-year_tp2 - but we don't know that so we cannot establish the outcome and it would be NA
+      is.na(alive_plus_deceased_year_tm1) & 
+        is.na(alive_plus_deceased_year_t) & 
+        is.na(alive_plus_deceased_year_tp1) & 
+        alive_plus_deceased_year_tp2 <= alive_plus_deceased_pre2017 ~ 0, # THE END [32] 
+      # [year_tp2, year_tp1, year_t, year_tm1] missing
+      is.na(alive_plus_deceased_year_tm1) & 
+        is.na(alive_plus_deceased_year_t) & 
+        is.na(alive_plus_deceased_year_tp1) & 
+        is.na(alive_plus_deceased_year_tp2) ~ NA_real_ # THE END [33]
+    )
+  ) 
+  
+  # Select just the id column and outcome columns
+  columns_to_return <- temporary_data2 %>%
+    select(nomem_encr, new_child)
+  return(columns_to_return)
+}
+
+outcome_2018_to_2020 <- calculate_outcome(year_t = 2018)
+
+data2 <- left_join(data2, outcome_2018_to_2020)
+```
+
+
+### Checking the outcome for random respondents
+
+```{r eval = FALSE}
+# selecting among our target group - 18-45 years old in *2017*
+# Note: if we use other outcome time windows, birth years for the target group need to change
+
+data3 <- data2 %>% filter(birthyear_bg >= 1972 & birthyear_bg <= 1999) 
+
+set.seed(1) # Emily: one person has unusual pattern; maybe a reporting error, unless father didn't learn about child until years after birth
+set.seed(2) # Emily: looks good
+set.seed(3) # Emily: looks good
+set.seed(4) # Emily: looks good 
+set.seed(5) # Emily: one person has unusual pattern; perhaps child was born in late 2017 after the survey
+set.seed(6) # Emily: looks good 
+set.seed(7) # Emily: one person has unusual pattern; maybe a reporting error, unless father didn't learn about two children until years after birth
+set.seed(8) # Emily: looks good 
+examine <- data3 %>%
+  group_by(new_child) %>%
+  sample_n(5) %>%
+  select(nomem_encr, cf17j454, cf18k454, cf19l454, cf20m454, 
+         bio_birthyears_2017,bio_birthyears_2018,bio_birthyears_2019,bio_birthyears_2020,
+         all_birthyears_2017,all_birthyears_2018,all_birthyears_2019,all_birthyears_2020,
+         cf17j471, cf18k471, cf19l471, cf20m471,
+         dec_birthyears_2017,dec_birthyears_2018,dec_birthyears_2019,dec_birthyears_2020,
+         relationships_2017,relationships_2018,relationships_2019,relationships_2020,
+         alive_plus_deceased_2017, alive_plus_deceased_2018, alive_plus_deceased_2019, alive_plus_deceased_2020, 
+         new_child)
+
+# Emily's note: In the 2021-2023 data, Lisa saw some unusual cases similar to the ones
+# I noted above. She opted to leave them as-is since it is unclear what the "correct" 
+# answer is. I will do the same, leaving these cases as-is. 
+```
+
+
+Across the entire sample (not only the target group), the outcome based on the Core survey values is distributed as follows:
+```{r}
+table(data2$new_child, useNA = "always")
+```
+
+
+# Creating the outcome on the basis of background variables
+
+This part of the script uses the LISS *Background survey* to calculate the outcome - who had a new child in 2021-2023 - for a subset of LISS respondents.  
+
+In the Family & Household Core surveys, people are asked directly about the number of children that they have (whether they live together with the parents or not). In the Background surveys, a household contact person lists all people who live in the household, how they are related to the household head (e.g. his/her wedded or unwedded partner, child, or other), and the years of birth for all household members. Important: only children **living in the household** are listed in this survey. If there were no new children added to the household in 2021-2023, it does not mean that no one in this household had a new child in this period. Someone might have a new child, but they do not live together, and the child does not appear in this data. But if there is a new child, born in 2021-2023, who is added to a household, we can rather safely assume that the household head and his/her partner had a new child.  
+
+Hence we cannot calculate the outcome using the Background survey only, but we can use it as a supplementary source of information to find people who had a new child, but for whom we couldn't calculate the outcome based on the LISS Family & Household surveys (because some LISS panel participants skipped some or all these surveys).   
+
+For each household we find out if a household member with `positie = 5` (child of the household head), born in 2021/2022/2023 was added to the household at some point. For people in these households with position 1 (household head) and 2 or 3 (wedded/unwedded partner of a household head), the outcome is 1. !Assumption: if household member had a parther and household head has a child, we assume that this is the partner's child as well.  
+
+We only count children, born in 2021-2023. We cannot count children who were added to a household in 2021-2023, no matter when they were born because children added to a household in 2021-2023 might be children who lived in a different household, not "new" children. We cannot differentiate, for example, between a child adopted in 2021-2023 (the outcome should be 1 in this case) and a child the person previously had but who moved into the same household in 2021-2023 (the outcome shouldn't be 1 only due to this child).  
+
+We use this additional information about children born in 2021-2023 only if the main outcome (calculated based on the Family & household surveys) is missing.   
+
+**Emily's note** My adjusted code does the same as Lisa's original code, but for 2018-2020 instead of 2021-2023. 
+
+## Data 
+
+```{r warning = F, message = F}
+# load the data - PreFer_train_background_data.csv should work 
+background <- fread("data/PreFer_train_background_data.csv")
+```
+
+
+## Creating information on children born in 2021-2023
+
+For each household (`nohouse_encr`) in each wave (`wave`), we get lists of 1) household members' positions (household head, his/her wedded or unwedded partner, their children) and 2) their birth years. From this information, we can retrieve the information birthyears for children living in the household that are children from either the household head or the partner. Wecan also retrieve the number of children in the household and whether partner(s) are reported. 
+
+We need information only about parents and children, so we will exclude from the dataset all household members with other positions. In the dataset, children of the household head/partner are indicated by `position == 5`, but respondents may mislabel children (e.g., some children may not have been given a label of `5`). This is why we first check if there are any household members born in 2021-2023 (with birthyears from 2021 to 2023), but cannot be `4` (parent in law), `6` (housemate), or `7` (Family member or boarder).  
+
+
+```{r}
+# checking the positions of people who were born in *2018-2020*
+# and are not labelled "child living at home," because these might be mislabelled
+possibly_mislabelled_households <- background %>%
+   filter(positie %in% c(1, 2, 3, 4, 6, 7) & birthyear_imp >= 2018) %>%
+   pull(nohouse_encr) %>% unique()
+# Lisa: there are three households where someone with a birthyear post 2021 is not labelled as a child
+# Emily: there are three household where someone with a birthyear post 2018 is not labelled as "child living at home"
+# (different than the ones Lisa mentioned above; I am not typing their IDs here since this code is public)
+
+# Emily: Examine the household structure of these cases
+examine <- background %>% 
+  filter(nohouse_encr == possibly_mislabelled_households[3]) %>%
+  select(nomem_encr, nohouse_encr, wave, positie, birthyear_imp) 
+
+# Emily: Pull the personal IDs for the people who may be mislabelled 
+possibly_mislabelled_people <- background %>%
+   filter(positie %in% c(1, 2, 3, 4, 6, 7) & birthyear_imp >= 2018) %>%
+   pull(nomem_encr) %>% unique()
+
+# Emily: Person 1 was born in 2018 and is labelled as as "partner". Other members of the household
+# are two adults (labelled head of house and partner) and another child. Following the way 
+# Lisa handled a similar case, I will relabel this person as "Child living at home." 
+background <- background %>%
+  mutate(positie = case_when( 
+    nomem_encr == possibly_mislabelled_people[1] ~ 5, # Relabel person 1 as "child living at home"
+    TRUE ~ positie # For everyone else, keep the same value
+    ))
+
+# Emily: Person 2 and person 3: based on the age and position of other household members, 
+# these people are likely the grandchild of the head of household. Following the way 
+# Lisa handled a similar case, I will not consider these people to be a "new child." 
+
+# After checks select only household heads, partners and children
+background <- background %>% filter(positie %in% c(1, 2, 3, 5)) %>% arrange(wave, nohouse_encr)
+
+# getting the lists of positions and birth years, and number of partners and children
+background <- background %>% 
+  group_by(wave, nohouse_encr) %>% 
+  mutate(
+    # list of all relations to household head in the household
+    positions = list(positie), 
+    # list of all birthyears
+    birthyears = list(birthyear_imp)
+  ) %>% ungroup() %>%  
+  mutate(
+    # number of children present
+    how_many_children = map_int(positions, function(x) sum(5 == x, na.rm = TRUE) ), 
+    # number of partners
+    how_many_partners = map_int(positions, function(x) sum(x %in% c(2, 3), na.rm = TRUE )), 
+    # list of birth years of children
+    birthyears_children = map2(positions, birthyears, function(x, y) y[x == 5]),
+    # list of birth years of household head plus partner
+    birthyears_partners = map2(positions, birthyears, function(x, y) y[x %in% c(1, 2, 3)])
+  ) %>% ungroup()
+
+# Calculating if a child in a household was born in *2018-2020* 
+background <- background %>% arrange(nohouse_encr, wave) %>% 
+  # for each wave, get number of children born in *2018-2020* 
+  mutate(num_children_2018_2020 = map_int(birthyears_children, function(x) sum(x %in% c(2018:2020)) ) ) %>% 
+  # household composition can change from wave to wave so we calculate if the number of household members born in 2021-2023 was non-zero at least in one wave
+  # Note that "any2021_2023" is 1 for all household rows if at least in one wave it was 1
+  group_by(nohouse_encr) %>%
+  mutate(any2018_2020 = as.numeric(max(num_children_2018_2020) >= 1)) %>% ungroup() 
+
+# selecting variables for examination
+background_new_child <- background %>%
+  select(nomem_encr, nohouse_encr, wave, positie, aantalhh, aantalki, birthyear_imp,
+         positions, birthyears, how_many_partners, how_many_children, 
+         birthyears_children, birthyears_partners, num_children_2018_2020, any2018_2020)
+```
+
+
+### How reliable is the birthyear information
+
+Before we select only those who had a child, we first do an assessment on the reliability of the data. We particularly focus on cases where a new child was born between 2021 and 2023, because we will only add those positive cases to the core survey and not the negative cases (no child born) because if we observe a "0", it means that no child was born that lives in the household and is the child of the household head or partner. But it could still be that a respondent had a child that is *not* living in the same household. Thus, we can only be certain of 1s and not of 0s. 
+
+**Emily's note:** My edited code does the same as Lisa's original code, except of course that it focuses on outcome years 2018-2020 instead of 2021-2023.
+
+```{r eval = FALSE}
+# Exceptionally large differences between the age of the household head and the partner
+# may signal problems
+verify <- background_new_child %>%
+  # select households where there is a partner and where a child was born
+  filter(how_many_partners > 0 & any2018_2020 == 1) %>%
+  mutate(
+    # age difference between partners - youngest (largest birth year) and oldest 
+    age_difference_partners = map_int(birthyears_partners, function(x) max(x) - min(x) ),
+    age_difference_partner_child = map2(
+      birthyears_children, birthyears_partners, 
+      function(x, y) ifelse(identical(x, numeric(0)), NA, 
+                            ifelse(is.na(x), NA, min(x, na.rm = TRUE) - max(y, na.rm = TRUE)  )) )
+  )
+potential_errors <- verify %>%
+  # age difference 10 is not 'suspicious' but we start with it
+  filter(age_difference_partners >= 10) %>% pull(nohouse_encr) %>% unique()
+# Lisa: there are 15 households
+# Emily: there are 12 households
+
+verify <- verify %>%  
+  select(nomem_encr, nohouse_encr, wave, positie, birthyears_children, birthyears_partners,
+         age_difference_partners, age_difference_partner_child) %>% arrange(nohouse_encr, wave)
+veri <- verify %>% filter(nohouse_encr == potential_errors[1]) # looks okay
+veri <- verify %>% filter(nohouse_encr == potential_errors[2]) # looks okay
+veri <- verify %>% filter(nohouse_encr == potential_errors[3]) # Child born 2010 is sometimes labelled as partner
+veri <- verify %>% filter(nohouse_encr == potential_errors[4]) # looks okay (divorce and new partner?)
+veri <- verify %>% filter(nohouse_encr == potential_errors[5]) # looks okay (perhaps has children from previous partner?)
+veri <- verify %>% filter(nohouse_encr == potential_errors[6]) # looks okay 
+veri <- verify %>% filter(nohouse_encr == potential_errors[7]) # looks okay 
+veri <- verify %>% filter(nohouse_encr == potential_errors[8]) # looks okay
+veri <- verify %>% filter(nohouse_encr == potential_errors[9]) # looks okay
+veri <- verify %>% filter(nohouse_encr == potential_errors[10]) # looks okay
+veri <- verify %>% filter(nohouse_encr == potential_errors[11]) # looks okay
+veri <- verify %>% filter(nohouse_encr == potential_errors[12]) # Looks like adult child moved out and started own family
+
+# Emily: As noted above, a person born 2010 is labelled as a partner in some waves. 
+# Following the way Lisa handled similar cases, I will not recode this person's data, 
+# since this doesn't affect the outcome. 
+
+# Emily: As noted above, there is a household for which it appears that an adult lived
+# at home with their parents, then moved out and started their own household, but are
+# still labelled with the same household ID. This will cause the grandparents of a child 
+# born in 2018 to be labelled as having a "new child". However, the grandparents will 
+# later be filtered out of our data anyway because they are out of the age range, so this 
+# is not a problem. 
+```
+
+## Excluding children from households
+
+Now we exclude children from the data. 
+
+```{r}
+# Now we also can delete everyone with positions 5 and leave only parents in the data
+background_new_child <- background %>% filter(positie %in% c(1, 2, 3))  
+
+# select only one line per person
+outcome_background <- background_new_child %>%
+  group_by(nomem_encr) %>%
+  # we select the last row but it doesn't matter which row we select because the column with the outcome has the same value (TRUE) for everyone in all rows 
+  filter(wave == max(wave)) %>% 
+  rename(new_child_bg = any2018_2020) %>% 
+  select(nomem_encr, new_child_bg, birthyear_imp, birthyears_children)
+# any(table(outcome_background$nomem_encr) > 1)
+```
+
+## Verifying consistency of outcome via Core survey and background data
+
+We now check the consistency between the outcome based on the core survey (based on information from the Family and Household survey) and the one based on background data (based on whether new children were added to the household). 
+
+It is important to realise that the outcome on the background contains all people (!!! with positions 1,2,3 within the household), also those not in our target group. 
+
+```{r}
+outcomes_full <- full_join(outcome_background, data2, by = "nomem_encr") 
+
+##!!! We use "full_join" here because we do not want to exclude anyone at this point. 
+# "outcome_background" includes everyone ever included in the households that are part of the LISS panel AND who are household heads/partner or spouse of the household head. 
+# "data2" includes only people who at least once participated in Family and Household Core study
+# We don't want to exclude people, who are in "outcome_background" but not in "data2": these people might have participated in other Core studies
+# We also don't want to exclude people who are in "data2" but not in "outcome_background" --- i.e. they hold different positions within the household. The outcome based on the Core studies might be available for them
+
+```
+
+### Describing overall patterns
+```{r message = FALSE}
+prop_nc <- sum(outcomes_full$new_child == 1, na.rm = TRUE) /  sum(!is.na(outcomes_full$new_child), na.rm = TRUE) # Lisa: about 7%; Emily: 6.2%
+prop_nc_bc <- sum(outcomes_full$new_child_bg == 1, na.rm = TRUE) /  sum(!is.na(outcomes_full$new_child_bg), na.rm = TRUE) # Lisa: about 4.6%; Emily: 4.3%
+
+# Emily: Lisa selected people between birthyears 2002 and 1975; I select birthyears between 1999 and 1972
+# select only people between birthyears 1999 and 1972 for checking
+outcome <- outcomes_full %>% filter(birthyear_imp >= 1972 & birthyear_imp <= 1999) 
+prop_nc_t <- sum(outcome$new_child == 1, na.rm = TRUE) /  sum(!is.na(outcome$new_child), na.rm = TRUE) # Lisa: about 23%; Emily: 20.0% 
+prop_nc_bc_t <- sum(outcome$new_child_bg == 1, na.rm = TRUE) /  sum(!is.na(outcome$new_child_bg), na.rm = TRUE) # about 11%; Emily: 5.7% 
+
+# Examining (in)consistencies (for target group)
+outcome %>% 
+  group_by(new_child, new_child_bg) %>% 
+  summarise(n = n()) %>% 
+  mutate(consistent = ifelse(new_child == new_child_bg, "consistent", "inconsistent")) 
+
+# Checking people who did not have child in Family & Household but had child in Background
+verify_list <- outcome %>% filter(new_child == 0 & new_child_bg == 1) %>% pull(nomem_encr)
+verify <- background_new_child %>% filter(nomem_encr %in% verify_list) %>%
+  select(nomem_encr, nohouse_encr, wave, positie, birthyears_children)
+
+outcomes_full %>% 
+  group_by(new_child, new_child_bg) %>% 
+  summarise(n = n()) %>% 
+  mutate(consistent = ifelse(new_child == new_child_bg, "consistent", "inconsistent"))
+```
+
+*Lisa:* Summary (concering our target group, born between 1975 and 2002):
+- On the basis of the Core survey, the probability of a new child is (122+181) / (1001+10+122+181) = 23%
+
+- On the basis of the Background survey, for whom the outcome from the Core survey is available, the probability of a new child is (181+10) / (1001+10+122+181) = 14.5%
+
+- On the basis of the Background survey, for whom the outcome from the Core survey is **NOT** available, the probability of a new child is (326) / (2995 + 326) = 10% 
+
+132 (10 + 122) discrepancies exist between these two outcome variables and 1182 (1001 + 181) are consistent, so an overall agreement of 1182 / (1182 + 132) = 90%  
+
+- There are 10 people for whom the outcome based on Family & Household study is 0, but based on Background survey it is 1. For 8 of these people, this can be explained by the fact that the household survey was held in mostly September and for some in October 2023, and that a new child was born in October, November, or December 2023. For 2 respondents (XXXXXX and XXXXXX) there is an inconsistency we cannot explain, where a child was added to the household with a birthyear of 2021 or higher, but this was not recorded via the Core surveys. The background variable seems reliable here.
+
+*Emily:* In the 2018-2020 outcome data, there are 8 people for whom the outcome based on Family & Household study is 0, but based on Background survey it is 1. These 8 are in 4 households. For 3 of the households, this can be explained by the child being born in October, November, or December, after the survey was held in September. For the fourth household, the background data doesn't report a child born in 2018 until July 2019, and the survey data never reports the child. It's unclear whether this is a child or grandchild of the oldest members of the household. Since it is unclear what happened here, I am leaving the data as-is. 
+
+*Emily:* I removed a code chunk here because it was similar to the previous code chunk. The code chunk I removed was for checking the differences between background and survey data; it did not alter the data in any way. 
+
+*Lisa's notes on findings, continued:* 
+
+- There are 122 outcomes where the Core surveys indicated the birth of a new child, whereas the background variables did not indicate this. There may be three reasons for this: 1) in the background variables only children are documented that live in the household. Thus, if a person's new child lives in a different location (different household), then this child will not be included in the outcome via the background variables; 2) in the Core survey, adopted children are included as having had a new child for the outcome. However, this adopted child could have a birthyear prior to 2021 in which case our measure based on the Background variables would not detect this new child; 3) respondents may have not updated the household variables. 
+
+- For 181 cases, it was observed that in both outcome variables there was a new child and for 1001 cases that there wasn't.  
+
+- For having a child, the success rate (agreement between outcomes) was 181 / (181 + 10) = 94.7%, or even 189 / (189 + 2) = 99% if we consider the 8 misidentified cases as correct, because the child was not born yet at the time of the survey (September/October 2023) but afterwards (from October to December 2023). This gives us some confidence in using 1s from the Background variables. 
+
+- For not having a child, the success rate was 1001 / (1001 + 122) = 89%.    
+
+- For 326 cases, there was no outcome available through the Family and Household survey, but on the basis of the background the outcome is 1.(*Emily:* for the 2018-2020 window, there are 136 people who have no outcome available through the survey but have an outcome of 1 according to background data.)
+
+
+```{r eval = FALSE}
+# Checking why 136 people didn't have the outcome in the file based on Family and Household
+# selecting IDs of these people
+ids <- outcomes_full %>%
+  filter(is.na(new_child) & new_child_bg == 1)
+# check when these 326 people joined LISS
+verify <- background %>% filter(nomem_encr %in% ids$nomem_encr) 
+table(verify$wave)
+# Lisa (findings for 2021-2023 outcome window): all joined only in 2021-2023, so for many of them the outcome based on Core studies cannot be calculated because wave 2020 of Family and Household is missing
+# Additional examination by Emily: 
+examine <- outcomes_full %>% 
+  filter(is.na(new_child) & new_child_bg == 1) 
+# Emily: 134 of the 136 that didn't have an outcome based on survey data are missing 
+# from the 2020 wave, which makes it impossible to know whether they had a new child in 
+# 2018-2020. These people weren't necessarily new to the survey; they were just 
+# missing in 2020, possibly due to the pandemic. The other 2 of these 136 had missingness
+# in other waves that precludes us from calculating the outcome.
+
+# Checking why there are 5809 people for whom the outcome based on background is 0 and the outcome based on Core study is missing
+examine <- outcomes_full %>% 
+  filter(is.na(new_child) & new_child_bg == 0) 
+examine %>% 
+  group_by(cf20m454) %>% # cf20m454 is "did you ever have any children?"
+  count()
+# Emily: for 5644 of the 5809, survey data on having children is missing in 2020 for one reason or another
+# For the remaining cases, survey data is missing from other waves such that we cannot calculate the outcome.
+```
+
+
+# Combine outcome from Core survey and background variables
+
+We will update the outcome, such that those who had no outcome available on the basis of Core surveys but for whom there was a new child on the basis of the Background variables, we imputed a 1. We've seen that positive cases were very reliable through the Background variables (99%)
+
+```{r}
+# we save the outcome for all people for whom it's available
+outcomes_full <- outcomes_full %>% 
+  select(nomem_encr, new_child, new_child_bg) %>% 
+  mutate(
+    new_child_comb = case_when(
+      !is.na(new_child) ~ new_child,
+      is.na(new_child) & new_child_bg == 1 ~ 1, 
+      TRUE ~ new_child
+    )
+)
+
+# checks
+#all(outcomes_full$new_child_comb[is.na(outcomes_full$new_child)] == 1, na.rm = TRUE)
+#all(outcomes_full$new_child_comb == outcomes_full$new_child, na.rm = TRUE)
+#table(outcomes_full$new_child_comb, useNA = "always")
+
+outcomes_full <- outcomes_full %>% 
+  select(-c(new_child, new_child_bg)) %>% 
+  rename(new_child = new_child_comb) %>% 
+  mutate(outcome_available = ifelse(!is.na(new_child), 1, 0))
+# table(outcomes_full$outcome_available) 
+
+# Emily: Lisa merged with a "core study" file to get the birth years. I don't have this file, 
+# so instead, I use the birth years from data2. Everyone in data2 participated in at 
+# least one core study. 
+birthyears <- data2 %>% 
+  select(nomem_encr, birthyear_bg)
+outcomes_to_save <- left_join(birthyears, outcomes_full, by = "nomem_encr") %>%
+  filter(birthyear_bg >= 1972 & birthyear_bg <= 1999) %>%
+  select(nomem_encr, new_child)
+
+dir.create("data/intermediate_files")
+write_csv(outcomes_to_save, "data/intermediate_files/outcome_2018to2020.csv")
+```
+
+# Session info
+```{r}
+sessionInfo()
+dir.create("numbers/timing", recursive = TRUE)
+Sys.time()%>%
+  difftime(start, units = "mins") %>%
+  write("numbers/timing/01_outcome_time_shift.tex")
+```

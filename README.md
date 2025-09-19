@@ -1,66 +1,198 @@
-# Predicting Fertility Data Challenge (PreFer)
+Computer: 2020 MacBook Pro
+Processor: 2 GHz Quad-Core Intel Core i5
+Memory: 16 GB 3733 MHz LPDDR4X
+OS: MacOS Sequoia 15.6.1
+Disk Space: 512GB
+Programming Language: R 4.3.3
+Packages:
+groundhog 3.2.0
+here 1.01
+rmarkdown 2.26
+knitr 1.46
+tidyverse 2.0.0
+haven 2.5.4
+data.table 1.15.4
+tidymodels 1.2.0
+xgboost 1.7.7.1
+kableExtra 1.4.0
+ggthemes 5.1.0
+ggflowchart 1.0.0
+ggridges 0.5.6
 
-This is a template repository to prepare your submission for phase 1 of the Predicting Fertility Data Challenge ([PreFer](https://preferdatachallenge.nl)) through the Next platform. The challenge is to predict whether an individual will have a child within a three year period (2021-2023), based on survey data from previous years (2007-2020). Data come from the [LISS panel](https://www.centerdata.nl/en/liss-panel). For more information, on the data challenge, please visit the [website](https://preferdatachallenge.nl) or read [this paper](https://arxiv.org/abs/2402.00705).
 
-ℹ️ Check out the [Wiki](https://github.com/eyra/fertility-prediction-challenge/wiki/PreFer-Challenge-Wiki) for challenge scope, leaderboards, and frequently asked questions.  
 
-## Overall workflow
-- [Prerequisites](https://github.com/eyra/fertility-prediction-challenge#prerequisites) 
-- [Prepare your method](https://github.com/eyra/fertility-prediction-challenge#prepare-your-method) 
-- [Submit your method](https://github.com/eyra/fertility-prediction-challenge#submit-your-method
-)
-  
-## Prerequisites
 
-1. Make a copy of [this](https://github.com/eyra/fertility-prediction-challenge) template repository, by forking and cloning as explained [here](https://github.com/eyra/fertility-prediction-challenge/wiki/PreFer-Challenge-Wiki#how-to-fork-and-clone-this-repository). Use your own copy of the repository to prepare your method for submission as explained [here](https://github.com/eyra/fertility-prediction-challenge/tree/master#prepare-your-method).
-2. Make sure to allow Github Actions on your own repository: Go to the “Actions” tab and click “I understand my workflows, go ahead and enable them.”
-3. If you have not already done so, download the training data and codebooks via the "Download Data" task on the Next platform.❗️**Important**: you are not allowed to share these datasets and you **may not** upload them to your Github repository!
+TABLE OF CONTENTS
 
-ℹ️ Click [here](https://preferdatachallenge.nl/posts/posts/2024-03-20-prefer-datasets.html) for a detailed explanation on the datasets that you have downloaded. Click [here](https://preferdatachallenge.nl/posts/posts/2024-03-21-prefer-codebooks.html) for an explanation on how to use the codebooks. 
 
-## Prepare your method
 
-To participate in the challenge you need to submit a method using this repository. 
+DATA
 
-1. **Choose your programming language**: the default set-up is Python, if you would like to use R, go to ```settings.json``` and change ```{"dockerfile": "python.Dockerfile"}``` into ```{"dockerfile": "r.Dockerfile"}```. Read [here](https://github.com/eyra/fertility-prediction-challenge/wiki#how-to-update-files-in-your-forked-repository) how to update files in your forked repository. ℹ️ For Python this repo assumes that your method uses the [Anaconda](https://docs.conda.io/projects/conda/en/stable/user-guide/install/index.html) Python distribution.
 
-2. **Choose the main script to work with**: go to ```submission.py``` for Python or ```submission.R``` for R. 
 
-3. **Preprocess the data**: any steps to clean or preprocess the data need to be added to the ```clean_df``` function in the `submission.py`/`submission.R` script with documentation. *Note*: The function ```clean_df``` will also be applied to the holdout data when you submit your model. At this point, the [codebooks](https://preferdatachallenge.nl/posts/posts/2024-03-21-prefer-codebooks.html) can be useful to make sense of the data.
+	data/PreFer_train_data.csv
+	
+	Provided by PreFer organizers, this file contains predictive features for the official PreFer training set.
+	
+	
+	
+	data/PreFer_train_outcome.csv
 
-4. **Train, tune, and save your model**: any steps to train your model need to be added to the `training.py`/`training.R` script with documentation (e.g., code for the model, number of folds, set seed). The only function in this script is `train_save_model` in which you can add the steps needed to run the model. The output of this script is your saved model, e.g. ```model.joblib``` for Python or  ```model.rds``` for R. Make sure that your model is saved in the same folder as `submission.py`/`submission.R` under the name `model.joblib` for Python or `model.rds` for R. You can save the model in another format as well.
+	Provided by PreFer organizers, this file contains the fertility outcome for the official training set.
 
-5. **Test your model on fake data**: you can test your ```clean_df``` function and your model (stored in:  ```model.joblib```/```model.rds```) on the fake data (`PreFer_fake_data.csv`) with the ```predict_outcomes``` function. The ```predict_outcomes``` function in `submission.py`/`submission.R` will be run on the holdout data to generate your challenge submission result on the leaderboard. Make sure that the outputs of your model are predicted classes (i.e. 0s and 1s) rather than, for example, probabilities. If you saved the model in another format (not 'joblib' for Python or 'rds' for R), update the way of loading the model. Also, make sure to add or edit dependencies when required as described [here](https://github.com/eyra/fertility-prediction-challenge/wiki/PreFer-Challenge-Wiki#how-to-add-or-edit-dependencies-librariespackages). If your method does not run on the "fake data", it will not run on the holdout data. If you passed the test (i.e.```predict_outcomes``` led to predictions rather than errors), you can start [submitting your method](https://github.com/eyra/fertility-prediction-challenge/tree/master#submit-your-method). 
-  
-ℹ️ Check out [this website](https://preferdatachallenge.nl/posts) for guides, notebooks, and blogs to guide you through this process. 
 
-## Submit your method
 
-Submit your method via the "Submit Method" task on the Next platform by providing a link to the repository with your method (GitHub commit URL). Follow the instructions below:
+	data/PreFer_train_supplementary_data.csv
+	
+	Provided by PreFer organizers, this file contains predictive features for people not in the official PreFer training or holdout set but participated in at least one core survey by 2020.
+	
+	
+	
+	PreFer_train_background_data.csv
+	
+	Provided by the PreFer organizers, this file contains additional background data on members of the official training set and their households.
+	
+	
+	
+	data/PreFer_holdout_data.csv
+	
+	Provided by PreFer organizers, this file contains predictive features for the official PreFer holdout set.
+	
+	
+	
+	data/PreFer_holdout_outcome.csv
 
-1. Make sure that you describe your model in the `description.md` file in your GitHub repository and commit changes (i.e. save changes locally)
-2. Push the commit (i.e. upload changed version to your online repository). ❗️**Important**: make sure that you only push the relevant files and make sure that you **do not upload any of the datasets**. 
-3. In GitHub make sure that the checks pass:
+	Provided by PreFer organizers, this file contains the fertility outcome for the official holdout set.
 
-![](https://github.com/eyra/fertility-prediction-challenge/blob/master/images/Checks%20passed.png)
 
-ℹ️ If the check fails go to [FAQ](https://github.com/eyra/fertility-prediction-challenge/wiki/PreFer-Challenge-Wiki#frequently-asked-questions). You might need to add dependencies as described [here](https://github.com/eyra/fertility-prediction-challenge/wiki/PreFer-Challenge-Wiki#how-to-add-or-edit-dependencies-librariespackages).
 
-4. On the main page of your repository, above the file list, click "Commits" to view a list of commits. Do NOT click "N commits ahead of". See example below:
- ![](https://github.com/eyra/fertility-prediction-challenge/blob/master/images/screenshot_commits.PNG)
+	PreFer_holdout_background_data.csv
+	
+	Provided by the PreFer organizers, this file contains additional background data on members of the official holdout set and their households.
+	
+	
+	
+	table_a1.csv
+	
+	We prepared the table by hand to describe features in our winning model
+	
+	
+	
+CODE
 
-5. Go to the commit that you want to submit and right click on "view commit details", then click "Copy Link Address", see example below:
 
-![](https://github.com/eyra/fertility-prediction-challenge/blob/master/images/Copy%20link%20to%20commit.png)
 
-6. Add a submission on the Next platform by providing the URL to your GitHub commit (copied at step 5), this commit will serve as your submission to the challenge.
+	With the exception of 00_run_all.R, all files create tex files in numbers/timing to indicate how long it took the code to run. Each of the file create one tex files except for 04_training.R, which creates 14. With the computational infrastructure described above, the code takes a bit more than 7 hours to run.
 
-ℹ️ Leaderboards are generated at fixed time points, check out [important dates](https://preferdatachallenge.nl/#important-dates) for leaderboard submission deadlines. Check out the [Wiki](https://github.com/eyra/fertility-prediction-challenge/wiki/PreFer-Challenge-Wiki#leaderboards) for more info on the leaderboards.
 
-## License
 
-This project is licensed under the terms of the [MIT license](https://github.com/eyra/fertility-prediction-challenge/blob/master/LICENSE).
+	00_run_all.R 
+	
+	This file allows you to run all code in one command line, with fertility-prediction-challenge-2024 as the working directory. 
+	
+	For CV performance, run:
+	
+	Rscript code/00_run_all.R --preds_cv TRUE --preds_holdout FALSE
+	
+	For holdout performance, run:
+	
+	Rscript code/00_run_all.R --preds_cv FALSE --preds_holdout TRUE
+	
+	For performance in combined CV and holdout data, run:
+	
+	Rscript code/00_run_all.R --preds_cv TRUE --preds_holdout TRUE
 
-## Acknowledgements
-
-The code in this repository is developed by [Eyra](https://eyra.co/) as part of the Rank program funded by [ODISSEI](https://odissei-data.nl/en/) and the [NWO VIDI grant](https://www.rug.nl/gmw/news/210714-vidi-gert-stulp?lang=en) awarded to Gert Stulp. The [LISS panel](https://www.centerdata.nl/en/liss-panel) data is provided by [Centerdata](https://www.centerdata.nl/).
+	
+	
+	01_outcome_time_shift.Rmd 
+	
+	This file reads data/PreFer_train_data.csv, data/PreFer_train_supplementary_data.csv, and data/PreFer_train_background_data.csv.
+	
+	This file creates data/intermediate_files/outcome_2018to2020.csv.
+	
+	The csv file contains fertility outcomes between 2018 and 2020.
+	
+	
+	
+	02_feature_time_shift.R 
+	
+	This file reads data/PreFer_train_data.csv, data/PreFer_train_supplementary_data.csv, and data/intermediate_files/outcome_2018to2020.csv.
+	
+	This file creates data/intermediate_files/train_data_for_2018to2020.csv.
+	
+	The csv file contains predictive features for outcomes between 2018 and 2020.
+	
+	
+	
+	03_clean_df.R
+	
+	This file reads data/PreFer_train_data.csv, data/PreFer_train_background_data.csv, data/intermediate_files/train_data_for_2018to2020.csv, data/PreFer_holdout_data.csv (if preds_holdout == TRUE), and data/PreFer_holdout_background_data.csv (if preds_holdout == TRUE).
+	
+	This file creates 18 (if preds_holdout == FALSE)  or 27 (additional 9 files if preds_holdout == TRUE) RDS files in data/intermediate_files/cleaned_dfs. These files are different cleaned versions of the datasets.
+	
+	
+	
+	04_training.R
+	
+	This file reads 18 files (the ones created if preds_holdout == FALSE) from data/intermediate_files/cleaned_dfs. 
+	
+	This file creates and then later reads data/intermediate_files/folds.RDS. The file contains information on how the official training set is randomly assigned to five cross validation folds.
+	
+	If preds_cv == TRUE, this file creates 14 files in data/intermediate_files/preds_cv. These files are predictions made for each individual in the CV folds.
+	
+	This file always creates 14 files in data/intermediate_files/models. These are different model objects.
+	
+	
+	
+	05_observation_count.R
+	
+	This file reads data/PreFer_train_outcome.csv, data/intermediate_files/outcome_2018to2020.csv, data/PreFer_holdout_outcome.csv, and data/intermediate_files/train_data_for_2018to2020.csv.
+	
+	This file creates figures/figure2_data.csv, which contains the numbers mentioned in Figure 2.
+	
+	This file creates tables/table1.tex, which contains the Latex code for Table 1.
+	
+	This file creates two tex files in numbers/section2_2. The files contain the two numbers mentioned in that section, counting the number of individuals in each time period.
+	
+	This file creates one tex file in numbers/section4_3. The file contains the second number mentioned in that section, counting the number of individuals with outcomes between 2021 and 2023.
+	
+	This file creates up to two tex files in numbers/section4_7_1. The files contains the two numbers mentioned in that section, counting the number of individuals in the original training and holdout sets. The latter number is generated only if preds_holdout == TRUE
+	
+	This file always creates two tex files in numbers/section2_3. The files contain the fourth and fifth numbers in that section. The numbers are the percentage of participant new children in the two time periods.
+	
+	
+	
+	06_missingness_count.R
+	
+	This file reads data/PreFer_train_data.csv, data/PreFer_train_supplementary_data.csv, data/intermediate_files/cleaned_dfs/cleaned_train_2021to2023_full_features_final.RDS, data/intermediate_files/cleaned_dfs/cleaned_train_2018to2020_full_features_final.RDS, data/PreFer_train_outcome.csv, data/intermediate_files/otucome_2018to2020.
+	
+	This file creates a tex files in numbers/section4_3. The file counts the original numbe of features in the original training file.
+	
+	This file creates three tex file in numbers/section2_3. Two of the numbers represent the average missing rate in the two time periods, respectively. One of the numbers count the number of people in time shifted data without a core survey up to 2017.
+	
+	This file creates two png files in the figures folder. One figure features collection histograms that show missingness rates across features. The other figure figures a flowchart that illustrate the data exclusion process.
+	
+	
+	
+	08_all_preds.R
+	
+	This file reads data/intermediate_files/folds.RDS and 14 RDS files from data/intermediate_files/preds_cv. If preds_holdout == TRUE, it will also read data/PreFer_holdout_data.csv, data/PreFer_holdout_outcome.csv, data/PreFer_train_outcome.csv, 9 RDS files from data/intermediate_files/cleaned_dfs (the 9 not read by training.R), and 14 RDS files from data/intermediate_files/models
+	
+	This file creates data/intermediate_files/preds.RDS, which contains all predictions by all models, as well training set means and outcomes.
+	
+	
+	
+	09_metrics.R
+	
+	This file establishes several custom made performance metric functions in the tidymodels style
+	
+	
+	
+	10_eval.R
+	
+	This file reads data/intermediate_files/preds.RDS
+	
+	This file creates 5 png files in the figures folder and 8 tex files in the tables folder to illustrate model performance or improvements inperformance.
+	
+	This file creates 18 tex files in numbers/section5_1 and 12 tex files in numbers/section5_3, representing the performance measures mentioned in those sections
+	

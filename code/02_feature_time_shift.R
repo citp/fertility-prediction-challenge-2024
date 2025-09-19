@@ -10,14 +10,15 @@
 # years by observing it in the feature set.
  
 # Load packages
+start <- Sys.time()
 library(groundhog)
 groundhog.library("tidyverse", "2024-04-23")
 
 # Load data
 # Main training data file
-train_data <- read.csv('PreFer_train_data.csv')
+train_data <- read.csv('data/PreFer_train_data.csv')
 # Data file for people born prior to 1975 and after 2002 
-supplementary_data <- read.csv('PreFer_train_supplementary_data.csv')
+supplementary_data <- read.csv('data/PreFer_train_supplementary_data.csv')
 
 ###### STEP 0: COMBINE THE TRAIN DATA AND SUPPLEMENTARY DATA ########
 
@@ -149,6 +150,7 @@ features <- features %>%
 # "cf18k470" (fifteenth child birthyear 2018)
 # "cf19l470" (fifteenth child birthyear 2019)
 # "cf20m470" (fifteenth child birthyear 2020)
+# "age_bg" (age, change in direction opposite to birthyears)
 
 # The following features are not associated with a specific wave, and can be left as-is
 # because they are typically time-invariant: 
@@ -263,7 +265,8 @@ features <- features %>%
                   "cf18k468", "cf19l468", "cf20m468",
                   "cf18k469", "cf19l469", "cf20m469",
                   "cf18k470", "cf19l470", "cf20m470",),
-                ~ .x + years_to_shift))
+                ~ .x + years_to_shift),
+         age_bg = age_bg - years_to_shift)
 
 # Handle other special features
 # nettohh_f_2020 (net household income in euros) and nettoink_f_2020 (net individual income in euros) needs to be adjusted for inflation.
@@ -289,7 +292,7 @@ features_for_2018to2020 <- features_for_2018to2020 %>%
   select(-outcome_available)
 
 # Read in the time-shifted outcome data
-outcome_2018to2020 <- read.csv("outcome_2018to2020.csv")
+outcome_2018to2020 <- read.csv("data/intermediate_files/outcome_2018to2020.csv")
 
 # Create indicator for whether outcome is available
 outcome_available_df <- outcome_2018to2020 %>%
@@ -345,4 +348,9 @@ features_for_2018to2020 <- features_for_2018to2020 %>%
   )
 
 ######## STEP 6: SAVE THE FILES! ######## 
-write_csv(features_for_2018to2020, "train_data_for_2018to2020.csv")
+dir.create("data/intermediate_files")
+write_csv(features_for_2018to2020, "data/intermediate_files/train_data_for_2018to2020.csv")
+dir.create("numbers/timing", recursive = TRUE)
+Sys.time() %>%
+  difftime(start, units = "mins") %>%
+  write("numbers/timing/02_feature_time_shift.tex")
