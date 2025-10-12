@@ -403,7 +403,7 @@ make_table <- function(table_data, labels, caption) {
     substr(output, 1, nchar(output) - 18),
     paste0("footnotetext{\\textit{Note}. ",
            "Best performance of each row in bold. ",
-           "F1, precision, recall, and accuracy use $\\geq .5$ as threshold.}",
+           "F1, precision, recall, and accuracy used $\\geq .5$ as threshold.}",
            "\n\\end{sidewaystable}"
     )
   )
