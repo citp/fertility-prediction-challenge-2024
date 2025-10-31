@@ -125,7 +125,7 @@ make_plot <- function(results, results_summary,
       labels = labels,
       expand = expansion(mult = c(0, .6), add = 0)
     ) +
-    labs(x = bquote(italic(R)[Holdout]^2), y = "") +
+    labs(x = x, y = "") +
     theme_tommy()
 }
 figure5 <- make_plot(
@@ -205,6 +205,19 @@ figure6_filtered_results_summary <- contrasts_results_summary %>%
         c("final__original", "time_shift__original", "partner__original")
     )
   )
+# Determine x-axis label based on whether we are using CV and/or holdout preds
+if (preds_cv) {
+  if (preds_holdout) {
+    x <- bquote(italic(R)[CV-Holdout]^2)
+    r2_table <- "$R^2_\\text{CV-Holdout}$"
+  } else {
+    x <- bquote(italic(R)[CV]^2)
+    r2_table <- "$R^2_\\text{CV}$"
+  }
+} else {
+  x <- bquote(italic(R)[Holdout]^2)
+  r2_table <- "$R^2_\\text{Holdout}$"
+}
 figure6 <- ggplot(mapping = aes(y = name)) +
   geom_vline(xintercept = 0) +
   geom_errorbarh(
@@ -223,7 +236,7 @@ figure6 <- ggplot(mapping = aes(y = name)) +
     labels = c("Partner +\nTime Shift", "Time Shift", "Partner"),
     expand = expansion(mult = c(0, .9), add = 0)
   ) +
-  labs(x = bquote(italic(R)[Holdout]^2), y = "") +
+  labs(x = x, y = "") +
   theme_tommy()
 ggsave("figures/figure6.png", plot = figure6, width = 7, height = 5, dpi = 300)
 
@@ -381,7 +394,7 @@ make_table <- function(table_data, labels, caption) {
   
   # Tidy up the table
   rownames(output) <- c(
-    "$R^2_\\text{Holdout}$", "$R^2_\\text{In-sample}$", "AUC", "Log Loss",
+    r2_table, "$R^2_\\text{Traditional}$", "AUC", "Log Loss",
     "MSE", "F1", "Precision", "Recall", "Accuracy"
   )
   ci_labels <- paste(labels, "\\\\ 95\\% CI")

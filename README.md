@@ -102,6 +102,8 @@ CODE
 	
 	Rscript code/00_run_all.R --preds_cv TRUE --preds_holdout TRUE
 
+	You might see "Error in italic(R) : could not find function 'italic'". Ignore this. The code should have already finished running!
+
 	
 	
 	01_outcome_time_shift.Rmd 
