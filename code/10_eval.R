@@ -97,6 +97,20 @@ theme_tommy <- function() {
   )
 }
 
+# Determine x-axis label based on whether we are using CV and/or holdout preds
+if (preds_cv) {
+  if (preds_holdout) {
+    x <- bquote(italic(R)[CV-Holdout]^2)
+    r2_table <- "$R^2_\\text{CV-Holdout}$"
+  } else {
+    x <- bquote(italic(R)[CV]^2)
+    r2_table <- "$R^2_\\text{CV}$"
+  }
+} else {
+  x <- bquote(italic(R)[Holdout]^2)
+  r2_table <- "$R^2_\\text{Holdout}$"
+}
+
 # This function plots the distributions of a bootstrapped metric (R2-holdout)
 # with for multiple models
 make_plot <- function(results, results_summary,
@@ -205,19 +219,6 @@ figure6_filtered_results_summary <- contrasts_results_summary %>%
         c("final__original", "time_shift__original", "partner__original")
     )
   )
-# Determine x-axis label based on whether we are using CV and/or holdout preds
-if (preds_cv) {
-  if (preds_holdout) {
-    x <- bquote(italic(R)[CV-Holdout]^2)
-    r2_table <- "$R^2_\\text{CV-Holdout}$"
-  } else {
-    x <- bquote(italic(R)[CV]^2)
-    r2_table <- "$R^2_\\text{CV}$"
-  }
-} else {
-  x <- bquote(italic(R)[Holdout]^2)
-  r2_table <- "$R^2_\\text{Holdout}$"
-}
 figure6 <- ggplot(mapping = aes(y = name)) +
   geom_vline(xintercept = 0) +
   geom_errorbarh(
@@ -379,7 +380,7 @@ make_table <- function(table_data, labels, caption) {
     bind_cols(ci) %>%
     select(all_of(col_order)) %>%
     data.frame()
-  
+
   # Bold best model of each row
   for (row in 1:9) {
     if (!row %in% c(4, 5)) {
@@ -391,7 +392,7 @@ make_table <- function(table_data, labels, caption) {
       paste0("\\textbf{", output[row, 2 * best - 1], "}")
     output[row, 2 * best] <- paste0("\\textbf{", output[row, 2 * best], "}")
   }
-  
+
   # Tidy up the table
   rownames(output) <- c(
     r2_table, "$R^2_\\text{Traditional}$", "AUC", "Log Loss",
@@ -404,22 +405,21 @@ make_table <- function(table_data, labels, caption) {
   col.names <- paste0("\\parbox{1.5cm}{\\centering ", col.names, "}")
   output <- output %>%
     kable("latex",
-          col.names = col.names,
-          align = "c",
-          caption = caption,
-          escape = FALSE,
-          booktabs = TRUE,
-          linesep = ""
+      col.names = col.names,
+      align = "c",
+      caption = caption,
+      escape = FALSE,
+      booktabs = TRUE,
+      linesep = ""
+    ) %>%
+    footnote(
+      general = paste("Note: Best performance of each row in bold.",
+        "F1, precision, recall, and accuracy used $\\\\geq .5$ as threshold."
+      ),
+      escape = FALSE,
+      general_title = ""
     ) %>%
     str_replace_all("table", "sidewaystable")
-  paste0(
-    substr(output, 1, nchar(output) - 18),
-    paste0("footnotetext{\\textit{Note}. ",
-           "Best performance of each row in bold. ",
-           "F1, precision, recall, and accuracy used $\\geq .5$ as threshold.}",
-           "\n\\end{sidewaystable}"
-    )
-  )
 }
 dir.create("tables")
 table_data_b1 %>%
