@@ -1,4 +1,4 @@
-**SPECS & VERSION NUMBERS **
+**SPECS & VERSION NUMBERS**
 
 | Component            | Specification                 |
 | -------------------- | ----------------------------- |
@@ -36,53 +36,18 @@
 **DATA**
 
 
-
-	data/PreFer_train_data.csv
-	
-	Provided by PreFer organizers, this file contains predictive features for the official PreFer training set.
-	
-	
-	
-	data/PreFer_train_outcome.csv
-
-	Provided by PreFer organizers, this file contains the fertility outcome for the official training set.
-
-
-
-	data/PreFer_train_supplementary_data.csv
-	
-	Provided by PreFer organizers, this file contains predictive features for people not in the official PreFer training or holdout set but participated in at least one core survey by 2020.
-	
-	
-	
-	PreFer_train_background_data.csv
-	
-	Provided by the PreFer organizers, this file contains additional background data on members of the official training set and their households.
-	
-	
-	
-	data/PreFer_holdout_data.csv
-	
-	Provided by PreFer organizers, this file contains predictive features for the official PreFer holdout set.
-	
-	
-	
-	data/PreFer_holdout_outcome.csv
-
-	Provided by PreFer organizers, this file contains the fertility outcome for the official holdout set.
+| File                                       | Description                                                                                                                                                                         |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data/PreFer_train_data.csv`               | Provided by PreFer organizers. Contains predictive features for the official PreFer training set.                                                                                   |
+| `data/PreFer_train_outcome.csv`            | Provided by PreFer organizers. Contains the fertility outcome for the official training set.                                                                                        |
+| `data/PreFer_train_supplementary_data.csv` | Provided by PreFer organizers. Contains predictive features for people not in the official PreFer training or holdout set but who participated in at least one core survey by 2020. |
+| `data/PreFer_train_background_data.csv`    | Provided by PreFer organizers. Contains additional background data on members of the official training set and their households.                                                    |
+| `data/PreFer_holdout_data.csv`             | Provided by PreFer organizers. Contains predictive features for the official PreFer holdout set.                                                                                    |
+| `data/PreFer_holdout_outcome.csv`          | Provided by PreFer organizers. Contains the fertility outcome for the official holdout set.                                                                                         |
+| `data/PreFer_holdout_background_data.csv`  | Provided by PreFer organizers. Contains additional background data on members of the official holdout set and their households.                                                     |
+| `table_a1.csv`                             | Prepared manually to describe features in our winning model.                                                                                                                        |
 
 
-
-	PreFer_holdout_background_data.csv
-	
-	Provided by the PreFer organizers, this file contains additional background data on members of the official holdout set and their households.
-	
-	
-	
-	table_a1.csv
-	
-	We prepared the table by hand to describe features in our winning model
-	
 	
 	
 **CODE**
