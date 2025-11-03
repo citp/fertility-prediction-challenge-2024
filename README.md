@@ -7,13 +7,13 @@
 | **Memory**           | 16 GB 3733 MHz LPDDR4X        |
 | **Operating System** | macOS Sequoia 15.6.1          |
 | **Disk Space**       | 512 GB SSD                    |
+| **R**                | 4.3.3                         |
 
 
-| Item / package  | Version |
+| Package         | Version |
 | --------------- | ------- |
-| **R**           | 4.3.3   |
 | **groundhog**   | 3.2.0   |
-| **here**        | 1.01    |
+| **here**        | 1.0.1   |
 | **rmarkdown**   | 2.26    |
 | **knitr**       | 1.46    |
 | **tidyverse**   | 2.0.0   |
@@ -33,7 +33,7 @@
 
 
 
-**DATA**
+***Data***
 
 
 | File                                       | Description                                                                                                                                                                         |
@@ -50,7 +50,7 @@
 
 	
 	
-**CODE**
+***Code***
 
 
 
