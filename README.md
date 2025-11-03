@@ -1,32 +1,39 @@
-Computer: 2020 MacBook Pro
-Processor: 2 GHz Quad-Core Intel Core i5
-Memory: 16 GB 3733 MHz LPDDR4X
-OS: MacOS Sequoia 15.6.1
-Disk Space: 512GB
-Programming Language: R 4.3.3
-Packages:
-groundhog 3.2.0
-here 1.01
-rmarkdown 2.26
-knitr 1.46
-tidyverse 2.0.0
-haven 2.5.4
-data.table 1.15.4
-tidymodels 1.2.0
-xgboost 1.7.7.1
-kableExtra 1.4.0
-ggthemes 5.1.0
-ggflowchart 1.0.0
-ggridges 0.5.6
+**SPECS & VERSION NUMBERS **
+
+| Component            | Specification                 |
+| -------------------- | ----------------------------- |
+| **Computer**         | 2020 MacBook Pro              |
+| **Processor**        | 2 GHz Quad-Core Intel Core i5 |
+| **Memory**           | 16 GB 3733 MHz LPDDR4X        |
+| **Operating System** | macOS Sequoia 15.6.1          |
+| **Disk Space**       | 512 GB SSD                    |
+
+
+| Item / package  | Version |
+| --------------- | ------- |
+| **R**           | 4.3.3   |
+| **groundhog**   | 3.2.0   |
+| **here**        | 1.01    |
+| **rmarkdown**   | 2.26    |
+| **knitr**       | 1.46    |
+| **tidyverse**   | 2.0.0   |
+| **haven**       | 2.5.4   |
+| **data.table**  | 1.15.4  |
+| **tidymodels**  | 1.2.0   |
+| **xgboost**     | 1.7.7.1 |
+| **kableExtra**  | 1.4.0   |
+| **ggthemes**    | 5.1.0   |
+| **ggflowchart** | 1.0.0   |
+| **ggridges**    | 0.5.6   |
 
 
 
 
-TABLE OF CONTENTS
+**TABLE OF CONTENTS**
 
 
 
-DATA
+**DATA**
 
 
 
@@ -78,7 +85,7 @@ DATA
 	
 	
 	
-CODE
+**CODE**
 
 
 
