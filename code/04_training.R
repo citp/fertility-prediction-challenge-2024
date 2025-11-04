@@ -2,8 +2,7 @@
 
 # Load packages
 library(groundhog)
-"here" %>% 
-  c("tidyverse", "tidymodels", "xgboost") %>%
+c("here", "tidyverse", "tidymodels", "xgboost") %>%
   groundhog.library("2024-04-23")
 here() %>%
   setwd()
