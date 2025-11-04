@@ -2,7 +2,11 @@
 
 # Load packages
 library(groundhog)
-groundhog.library(c("tidyverse", "tidymodels", "xgboost"), "2024-04-23")
+"here" %>% 
+  c("tidyverse", "tidymodels", "xgboost") %>%
+  groundhog.library("2024-04-23")
+here() %>%
+  setwd()
 
 # This function outputs the predictions from a particular fold, suing the best
 # model emerging from CV tests
@@ -167,7 +171,10 @@ train_save_model <- function(cleaned_train_2021to2023, outcome_2021to2023,
       model_to_tune <- boost_tree(
         # Tune an xgboost model using grid search and cross validation
         mode = "classification",
-        sample_size = tune(), trees = tune(), tree_depth = tune(), learn_rate = tune()
+        sample_size = tune(),
+        trees = tune(),
+        tree_depth = tune(),
+        learn_rate = tune()
       )
     } else {
       model_to_tune <- boost_tree(

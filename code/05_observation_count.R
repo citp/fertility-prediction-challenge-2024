@@ -4,8 +4,9 @@
 # install.packages("groundhog")
 start <- Sys.time()
 library(groundhog)
-groundhog.library(c("tidyverse", "kableExtra"), "2024-04-23")
-setwd(here())
+groundhog.library(c("here", "tidyverse", "kableExtra"), "2024-04-23")
+here() %>%
+  setwd()
 
 # Read data
 # This function reads an outcome file and gets rid of any missing rows
@@ -49,7 +50,7 @@ tibble(
   n_train_too_old_2021to2023 = n_train_too_old_2021to2023,
   n_train_attrited = n_train_attrited
 ) %>%
-  write.csv("figures/figure2_data.csv")
+  write.csv("figures/Fig2_data.csv")
 
 # Create Table 1, a contingency table of individuals with and without new
 # children from either time period
@@ -69,24 +70,37 @@ n_train_2018to2023 <- n_train_2021to2023 + n_train_2018to2020
 n_train_2018to2023_0 <- n_train_2021to2023_0 + n_train_2018to2020_0
 n_train_2018to2023_1 <- n_train_2021to2023_1 + n_train_2018to2020_1
 table1 <- tibble(
-  outcome0 =
-    c(n_train_2021to2023_0, n_train_2018to2020_0, n_train_2018to2023_0),
-  outcome1 =
-    c(n_train_2021to2023_1, n_train_2018to2020_1, n_train_2018to2023_1),
-  total = c(n_train_2021to2023, n_train_2018to2020, n_train_2018to2023)
-) %>%
-  data.frame()
-rownames(table1) <- "Original Data (2021-2023)" %>%
-  c("Time-shifted Data (2018-2020)", "Total $N$")
+  source = c("Original data (2021--2023)", "Time-shifted data (2018--2020)",
+             "\\midrule\n\\textbf{Total \\textit{\\textbf{N}}}"
+  ),
+  outcome0 = c(n_train_2021to2023_0, n_train_2018to2020_0,
+               paste0("\\textbf{", n_train_2018to2023_0, "}")
+  ),
+  outcome1 = c(n_train_2021to2023_1, n_train_2018to2020_1,
+               paste0("\\textbf{", n_train_2018to2023_1, "}")
+  ),
+  total = c(
+    paste0("\\textbf{", n_train_2021to2023, "}"),
+    paste0("\\textbf{", n_train_2018to2020, "}"),
+    paste0("\\textbf{", n_train_2018to2023, "}")
+  )
+)
 dir.create("tables")
 table1 %>%
   kable("latex",
-    col.names = c("Outcome = 0", "Outcome = 1 (New Child)", "Total $N$"),
-    align = "cccc",
-    caption = 
-      "Sample Size by Outcome Class for Original \\& Time-Shifted Data",
-    escape = FALSE,
-    booktabs = TRUE
+        col.names = c(
+          "\\textbf{Data source}",
+          "\\textbf{\\shortstack[l]{Outcome = 0\\\\(no new child)}}",
+          "\\textbf{\\shortstack[l]{Outcome = 1\\\\(new child)}}",
+          "\\textit{\\textbf{N}}"
+        ),
+        align = "lcccc",
+        caption = paste0(
+          "Distribution of outcomes in original and time-shifted data}",
+          "\\label{table1:distribution_of_outcomes"
+        ),
+        escape = FALSE,
+        booktabs = TRUE
   ) %>%
   write("tables/table1.tex")
 

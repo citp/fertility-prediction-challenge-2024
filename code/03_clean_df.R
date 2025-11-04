@@ -6,7 +6,9 @@
 # install.packages("groundhog")
 start <- Sys.time()
 library(groundhog)
-groundhog.library("tidyverse", "2024-04-23")
+groundhog.library(c("here", "tidyverse"), "2024-04-23")
+here() %>% 
+  setwd()
 
 clean_df <- function(df, background_df, feature_set, partner, time_shift) {
   # Preprocess the input dataframe to feed the model.

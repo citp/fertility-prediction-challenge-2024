@@ -9,7 +9,9 @@
 # install.packages("groundhog")
 start <- Sys.time()
 library(groundhog)
-groundhog.library("tidyverse", "2024-04-23")
+groundhog.library(c("here", "tidyverse"), "2024-04-23")
+here() %>%
+  setwd()
 preds <- NULL
 
 # This function gets train_mean and outcomes for a particular fold

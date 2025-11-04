@@ -5,7 +5,9 @@
 # install.packages("groundhog")
 start <- Sys.time()
 library(groundhog)
-groundhog.library(c("tidyverse", "kableExtra"), "2024-04-23")
+groundhog.library(c("here", "tidyverse", "kableExtra"), "2024-04-23")
+here() %>%
+  setwd()
 
 # Make the table
 dir.create("tables")
@@ -18,7 +20,7 @@ table_a1 <- "data/table_a1.csv" %>%
     Source = paste("\\raggedright", Source)
   ) %>%
   kable("latex",
-    col.names = c("", "Variable Name", "Description", "Source"),
+    col.names = c("\\#", "Variable name", "Description", "Source"),
     align = "p{.5cm}p{5cm}p{3cm}p{2cm}",
     caption =
       "Features in the Winning Model",

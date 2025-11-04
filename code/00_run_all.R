@@ -2,7 +2,8 @@
 # install.packages("groundhog")
 library(groundhog)
 groundhog.library(c("here", "tidyverse", "rmarkdown"), "2024-04-23")
-setwd(here())
+here() %>%
+  setwd()
 
 # One must indicate in command line whether we are generating results using the
 # cv data and/or the holdout set.

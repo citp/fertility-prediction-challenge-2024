@@ -4,10 +4,11 @@
 # install.packages("groundhog")
 start <- Sys.time()
 library(groundhog)
-groundhog.library(
-  c("tidyverse", "ggthemes", "ggflowchart"),
+groundhog.library(c("here", "tidyverse", "ggthemes", "ggflowchart"),
   "2024-04-23"
 )
+here() %>%
+  setwd()
 
 # Read data
 train_data <- read.csv("data/PreFer_train_data.csv")
@@ -78,6 +79,7 @@ get_missing_rate <- function(df, dfs) {
 theme_tommy <- function() {
   theme_foundation() +
     theme(
+      text = element_text(family = "Helvetica"),
       panel.background = element_rect(color = NA),
       plot.background = element_rect(color = NA),
       plot.title = element_text(hjust = 0.5),
@@ -91,6 +93,19 @@ theme_tommy <- function() {
 }
 
 # Make histograms of missingness rates
+# This function saves a ggplot image as both a png file and a tiff file
+double_save <- function(plot, fig_num) {
+  "Figures/Fig" %>%
+    paste0(filename) %>%
+    paste0(".png") %>%
+    ggsave(plot = plot, width = 7, height = 5, dpi = 1200)
+  "Figures/Fig" %>%
+    paste0(filename) %>%
+    paste0(".tiff") %>%
+    ggsave(plot = plot, width = 7, height = 5, dpi = 1200)
+}
+
+# Make histogram
 figure_a1 <- 1:4 %>%
   map(~ get_missing_rate(.x, dfs)) %>%
   list_rbind() %>%
@@ -119,9 +134,8 @@ figure_a1 <- 1:4 %>%
     caption = "Vertical line indicates mean missingness"
   ) +
   theme_tommy() +
-  theme(panel.border = element_rect(color = "black"))
-"figures/figure_a1.png" %>%
-  ggsave(plot = figure_a1, width = 7, height = 5, dpi = 300)
+  theme(panel.border = element_rect(color = "black")) %>%
+  double_save("_a1")
 
 # Get missingness rates when one combines positive and negative outcomes
 data_2021to2023 <- data_2021to2023 %>%
@@ -176,9 +190,10 @@ figure_a2_nodes <- tibble(
     paste("Outcome Available\n", n_2018to2020)
   )
 )
-figure_a2 <- ggflowchart(figure_a2_edges, figure_a2_nodes)
-"figures/figure_a2.png" %>%
-  ggsave(plot = figure_a2, width = 7, height = 5, dpi = 300)
+figure_a2 <- figure_a2_edges %>%
+  ggflowchart(figure_a2_nodes) +
+  theme(text = element_text(family = "Helvetica")) %>%
+  double_save("_a2")
 Sys.time() %>%
   difftime(start, units = "mins") %>%
   write("numbers/timing/06_missingness_count.tex")

@@ -12,7 +12,8 @@
 # Load packages
 start <- Sys.time()
 library(groundhog)
-groundhog.library("tidyverse", "2024-04-23")
+groundhog.library(c("here", "tidyverse"), "2024-04-23")
+setwd(here())
 
 # Load data
 # Main training data file
