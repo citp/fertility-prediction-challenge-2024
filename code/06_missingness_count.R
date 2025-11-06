@@ -22,6 +22,7 @@ train_2018to2020 <- "data/intermediate_files/" %>%
 outcome_2021to2023 <- read.csv("data/PreFer_train_outcome.csv")
 outcome_2018to2020 <- "data/intermediate_files/outcome_2018to2020.csv" %>%
   read.csv()
+outcome_holdout <- read.csv("data/PreFer_holdout_outcome.csv")
 
 # Count number of features (not counting ID) in main training file
 dir.create("numbers/section4_3", recursive = TRUE)
@@ -30,10 +31,10 @@ dir.create("numbers/section4_3", recursive = TRUE)
   write("numbers/section4_3/01_n_features.tex")
 
 # Count number of people in time shifted data without a core survey up to 2017
-all_data <- rbind(train_data, supplementary_data)
+all_data_except_holdout <- rbind(train_data, supplementary_data)
 n_new_after_2017 <- train_2018to2020 %>%
   select(nomem_encr) %>%
-  left_join(all_data) %>%
+  left_join(all_data_except_holdout) %>%
   select(contains("_m")) %>% # These variables are NA if no participation
   select(-contains(c("18", "19", "20"))) %>%
   rowMeans(na.rm = TRUE) %>%
@@ -96,11 +97,11 @@ theme_tommy <- function() {
 # This function saves a ggplot image as both a png file and a tiff file
 double_save <- function(plot, fig_num) {
   "Figures/Fig" %>%
-    paste0(filename) %>%
+    paste0(fig_num) %>%
     paste0(".png") %>%
     ggsave(plot = plot, width = 7, height = 5, dpi = 1200)
   "Figures/Fig" %>%
-    paste0(filename) %>%
+    paste0(fig_num) %>%
     paste0(".tiff") %>%
     ggsave(plot = plot, width = 7, height = 5, dpi = 1200)
 }
@@ -134,8 +135,8 @@ figure_a1 <- 1:4 %>%
     caption = "Vertical line indicates mean missingness"
   ) +
   theme_tommy() +
-  theme(panel.border = element_rect(color = "black")) %>%
-  double_save("_a1")
+  theme(panel.border = element_rect(color = "black"))
+double_save(figure_a1, "_a1")
 
 # Get missingness rates when one combines positive and negative outcomes
 data_2021to2023 <- data_2021to2023 %>%
@@ -155,8 +156,8 @@ dfs_pos_neg <- 1:2 %>%
   round() %>%
   write("numbers/section2_3/02_n_missing_2021to2023.tex")
 
-
-# This function counts the number of rows in the data and adds commas in large 
+# This function counts the number of rows in the data and adds commas in large
+# numbers
 get_n <- function(df) {
   df %>%
     select(nomem_encr) %>%
@@ -164,36 +165,65 @@ get_n <- function(df) {
     length() %>%
     format(big.mark = ",")
 }
-# All LISS Participants Ever
-n_all_data <- get_n(all_data)
-# Born 1972-1999
-all_data_right_age_2018to2020 <- all_data %>%
-  filter(birthyear_bg > 1971, birthyear_bg < 2000)
-n_all_data_right_age_2018to2020 <- get_n(all_data_right_age_2018to2020)
-# Participated at Least Once 2018-2020
-participating_right_age_2018to2020 <- all_data_right_age_2018to2020 %>%
-  filter(!(is.na(cf18k_m) & is.na(cf19l_m) & is.na(cf20m_m)))
-n_participating_right_age_2018to2020 <- participating_right_age_2018to2020 %>%
+# All data
+n_all_data <- (nrow(outcome_holdout) + nrow(all_data_except_holdout)) %>%
+  format(big.mark = ",")
+# Holdout
+n_holdout <- get_n(outcome_holdout)
+# All data except holdout
+n_all_data_except_holdout <- get_n(all_data_except_holdout)
+# Born 1975-2002
+n_all_data_right_age_2021to2023 <- 
+  (nrow(outcome_holdout) + nrow(outcome_2021to2023)) %>%
+  format(big.mark = ",")
+# All data except holdout born 1972-1999
+n_all_data_except_holdout_right_age_2018to2020 <- all_data_except_holdout %>%
+  filter(birthyear_bg > 1971, birthyear_bg < 2000) %>%
   get_n()
-# Outcome Available
+# Outcome Available for 2021-2023
+n_2021to2023 <- (nrow(train_2021to2023) + nrow(outcome_holdout)) %>%
+  format(big.mark = ",")
+n_2021to2023_except_holdout <- get_n(train_2021to2023)
+# Outcome Available for 2018-2020
 n_2018to2020 <- get_n(train_2018to2020)
 
-# Make a flowchart
-figure_a2_edges <- tibble(from = c("a", "b", "c"), to = c("b", "c", "d"))
+# Make a flowchart for original data
+figure_a2_edges <- tibble(
+  from = c("a", "b", "c", "c"), to = c("b", "c", "d", "e")
+)
 figure_a2_nodes <- tibble(
-  name = c("a", "b", "c", "d"),
-  label = c(paste("All Participants Ever\n", n_all_data),
-    paste("Born 1972-1999\n", n_all_data_right_age_2018to2020),
-    paste("Participated at Least Once 2018-2020\n",
-      n_participating_right_age_2018to2020
-    ),
-    paste("Outcome Available\n", n_2018to2020)
+  name = c("a", "b", "c", "d", "e"),
+  label = c(
+    paste("Core Survey Takers 2007-2020\n", n_all_data),
+    paste("Born 1975-2002\n", n_all_data_right_age_2021to2023),
+    paste("Outcome Available for 2021-2023\n", n_2021to2023),
+    paste("Original Training Data\n", n_2021to2023_except_holdout),
+    paste("Holdout Data\n", n_holdout)
   )
 )
 figure_a2 <- figure_a2_edges %>%
   ggflowchart(figure_a2_nodes) +
-  theme(text = element_text(family = "Helvetica")) %>%
-  double_save("_a2")
+  theme(text = element_text(family = "Helvetica"))
+double_save(figure_a2, "_a2")
+
+# Make a flowchart for time shifted data
+figure_a3_edges <- tibble(
+  from = c("a", "a", "b", "c"), to = c("b", "e", "c", "d")
+)
+figure_a3_nodes <- tibble(
+  name = c("a", "b", "c", "d", "e"),
+  label = c(
+    paste("Core Survey Takers 2007-2020\n", n_all_data),
+    paste("Training and Supplementary Data\n", n_all_data_except_holdout),
+    paste("Born 1972-1999\n", n_all_data_except_holdout_right_age_2018to2020),
+    paste("Outcome Available for 2018-2020\n", n_2018to2020),
+    paste("Holdout Data\n", n_holdout)
+  )
+)
+figure_a3 <- figure_a3_edges %>%
+  ggflowchart(figure_a3_nodes) +
+  theme(text = element_text(family = "Helvetica"))
+double_save(figure_a3, "_a3")
 Sys.time() %>%
   difftime(start, units = "mins") %>%
   write("numbers/timing/06_missingness_count.tex")

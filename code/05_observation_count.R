@@ -71,7 +71,7 @@ n_train_2018to2023_0 <- n_train_2021to2023_0 + n_train_2018to2020_0
 n_train_2018to2023_1 <- n_train_2021to2023_1 + n_train_2018to2020_1
 table1 <- tibble(
   source = c("Original data (2021--2023)", "Time-shifted data (2018--2020)",
-             "\\midrule\n\\textbf{Total \\textit{\\textbf{N}}}"
+             "\\midrule\n\\textbf{Total \\textit{\\textbf{n}}}"
   ),
   outcome0 = c(n_train_2021to2023_0, n_train_2018to2020_0,
                paste0("\\textbf{", n_train_2018to2023_0, "}")
@@ -92,7 +92,7 @@ table1 %>%
           "\\textbf{Data source}",
           "\\textbf{\\shortstack[l]{Outcome = 0\\\\(no new child)}}",
           "\\textbf{\\shortstack[l]{Outcome = 1\\\\(new child)}}",
-          "\\textit{\\textbf{N}}"
+          "\\textit{\\textbf{n}}"
         ),
         align = "lcccc",
         caption = paste0(
