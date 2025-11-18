@@ -1,7 +1,19 @@
 # Set up
 # install.packages("groundhog")
 library(groundhog)
-groundhog.library(c("here", "tidyverse", "rmarkdown"), "2024-04-23")
+
+# Load dependencies for all files in the workflow
+groundhog.library(
+  c("here", "tidyverse", "rmarkdown", "knitr", "haven", "data.table",
+    "tidymodels", "xgboost", "kableExtra", "ggthemes", "ggflowchart", "ggridges"),
+  "2024-04-23",
+  quiet = TRUE
+)
+
+# Record that "run_all" has been executed so that dependencies aren't reloaded within other files 
+options(run_all_executed = TRUE)
+
+# Set working directory 
 here() %>%
   setwd()
 

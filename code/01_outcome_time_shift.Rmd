@@ -41,9 +41,13 @@ We do not use information from even earlier waves (2008-2014; note that the Fami
 
 ```{r setup, message = FALSE}
 start <- Sys.time()
-# install.packages("groundhog")
-library(groundhog)
-groundhog.library(c("knitr", "tidyverse", "haven", "data.table"), "2024-04-23")
+
+# Load packages if they weren't already loaded via the run_all script
+if (!isTRUE(getOption("run_all_executed"))) {
+  library(groundhog)
+  groundhog.library(c("knitr", "tidyverse", "haven", "data.table"), "2024-04-23")
+}
+
 # data.table for fread
 opts_knit$set(root.dir = "..")
 ```

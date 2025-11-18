@@ -2,15 +2,19 @@
 # metrics
 
 # Set up
-# install.packages("groundhog")
 start <- Sys.time()
-library(groundhog)
-groundhog.library(
-  c("here", "tidyverse", "tidymodels", "ggridges", "ggthemes", "kableExtra"),
-  "2024-04-23"
-)
+
+# Load packages if they weren't already loaded via the run_all script
+if (!isTRUE(getOption("run_all_executed"))) {
+  groundhog.library(
+    c("here", "tidyverse", "tidymodels", "ggridges", "ggthemes", "kableExtra"),
+    "2024-04-23"
+  )
+}
+
 here() %>%
   setwd()
+
 preds <- readRDS("data/intermediate_files/preds.RDS")
 
 # This function calculates nine metrics associated with a particular model

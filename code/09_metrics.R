@@ -2,10 +2,13 @@
 # style
 
 # Set up
-# install.packages("groundhog")
 start <- Sys.time()
-library(groundhog)
-groundhog.library(c("tidyverse", "tidymodels"), "2024-04-23")
+
+# Load packages if they weren't already loaded via the run_all script
+if (!isTRUE(getOption("run_all_executed"))) {
+  library(groundhog)
+  groundhog.library(c("tidyverse", "tidymodels"), "2024-04-23")
+}
 
 # R-squared holdout. Note that the dataframe must have a column called train_means
 rsq_holdout_impl <- function(truth, estimate, train_means) {

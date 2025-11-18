@@ -6,12 +6,17 @@
 # The CV also contains a column that indicates the outcome
 
 # Set up
-# install.packages("groundhog")
 start <- Sys.time()
-library(groundhog)
-groundhog.library(c("here", "tidyverse"), "2024-04-23")
+
+# Load packages if they weren't already loaded via the run_all script
+if (!isTRUE(getOption("run_all_executed"))) {
+  library(groundhog)
+  groundhog.library(c("here", "tidyverse"), "2024-04-23")
+}
+
 here() %>%
   setwd()
+
 preds <- NULL
 
 # This function gets train_mean and outcomes for a particular fold

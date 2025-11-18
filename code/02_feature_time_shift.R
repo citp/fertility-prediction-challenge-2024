@@ -9,10 +9,14 @@
 # "t" to other years to create more outcome observations, and we can get the data for those 
 # years by observing it in the feature set.
  
-# Load packages
 start <- Sys.time()
-library(groundhog)
-groundhog.library(c("here", "tidyverse"), "2024-04-23")
+
+# Load packages if they weren't already loaded via the run_all script
+if (!isTRUE(getOption("run_all_executed"))) {
+  library(groundhog)
+  groundhog.library(c("here", "tidyverse"), "2024-04-23")
+}
+
 setwd(here())
 
 # Load data

@@ -1,12 +1,16 @@
 # This file produces summary statistics on missing data
 
 # Set up
-# install.packages("groundhog")
 start <- Sys.time()
-library(groundhog)
-groundhog.library(c("here", "tidyverse", "ggthemes", "ggflowchart"),
+
+# Load packages if they weren't already loaded via the run_all script
+if (!isTRUE(getOption("run_all_executed"))) {
+  library(groundhog)
+  groundhog.library(c("here", "tidyverse", "ggthemes", "ggflowchart"),
   "2024-04-23"
-)
+  )
+}
+
 here() %>%
   setwd()
 
