@@ -11,5 +11,13 @@ PreFer_train_outcome.csv
 PreFer_train_supplementary_data.csv
 PreFer_train_supplementary_outcome.csv
 outcome_2018to2020.csv
+PreFer_holdout_outcome.csv
 train_data_for_2018to2020.csv
-outcome_time_shift.Rmd
+.Rhistory
+.Rapp.history
+figures/
+data/
+tables/
+numbers/
+01_outcome_time_shift.nb.html
+01_outcome_time_shift.pdf
