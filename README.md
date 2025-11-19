@@ -180,7 +180,7 @@ Alternatively, if you want to prepare the data files yourself, the LISS panel da
   
 ## INSTRUCTIONS FOR REPRODUCING RESULTS
 
-We have successfully reproduced the results using two different Mac computers. We have not tested reproducibility on Windows or Linux.
+We have successfully reproduced the results for cross-validated performance using two different Mac computers. We will test reproducibility for holdout and holdout + cross-validated combined performance when we are ready to assess performance on the holdout set after the journal review process. We have not tested reproducibility on Windows or Linux.
 
 **Please follow these steps to reproduce our results:**
 
