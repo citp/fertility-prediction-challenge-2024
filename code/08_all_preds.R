@@ -172,7 +172,7 @@ if (preds_holdout) {
   ) %>%
     map(get_holdout_preds) %>%
     list_cbind() %>%
-    mutate(train_means = mean(outcome_holdout$new_child, na.rm = TRUE)) %>%
+    mutate(train_means = mean(outcome_2021to2023$new_child, na.rm = TRUE)) %>%
     bind_cols(outcome_holdout) %>%
     select(-nomem_encr) %>%
     bind_rows(preds)
