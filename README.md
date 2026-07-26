@@ -92,7 +92,7 @@ With the exception of `00_run_all.R`, all files create tex files in the numbers/
 	
   This file creates one tex file in numbers/section4_3. The file contains the second number mentioned in that section, counting the number of individuals with outcomes between 2021 and 2023.
 	
-  This file creates up to two tex files in numbers/section4_7_1. The files contains the two numbers mentioned in that section, counting the number of individuals in the original training and holdout sets. The latter number is generated only if preds_holdout == TRUE
+  This file creates up to two tex files in numbers/section4_7_1. The files contains the two numbers mentioned in that section, counting the number of individuals in the original training and holdout sets. The latter number is generated only if preds_holdout == TRUE.
 	
   This file always creates two tex files in numbers/section2_3. The files contain the fourth and fifth numbers in that section. The numbers are the percentage of participant new children in the two time periods.
 	
@@ -102,11 +102,13 @@ With the exception of `00_run_all.R`, all files create tex files in the numbers/
 	
   This file reads data/PreFer_train_data.csv, data/PreFer_train_supplementary_data.csv, data/intermediate_files/cleaned_dfs/cleaned_train_2021to2023_full_features_final.RDS, data/intermediate_files/cleaned_dfs/cleaned_train_2018to2020_full_features_final.RDS, data/PreFer_train_outcome.csv, data/intermediate_files/otucome_2018to2020.
 	
-  This file creates a tex files in numbers/section4_3. The file counts the original numbe of features in the original training file.
+  This file creates a tex file in numbers/section4_3. The file counts the original numbe of features in the original training file.
 	
-  This file creates three tex file in numbers/section2_3. Two of the numbers represent the average missing rate in the two time periods, respectively. One of the numbers count the number of people in time shifted data without a core survey up to 2017.
+  This file creates three tex file in numbers/section2_3. Two of the numbers represent the average missing rate in the two time periods, respectively. 
+  
+  This file creates a tex file in numbers/section_a_1_1. The file counts the number of people in time shifted data without a core survey up to 2017.
 	
-  This file creates two png files in the figures folder. One figure features collection histograms that show missingness rates across features. The other figure figures a flowchart that illustrate the data exclusion process.
+  This file creates three jpg files in the figures folder. One figure features collection histograms that show missingness rates across features. The other two feature two flowcharts that illustrate the data exclusion process for the original data and the time shifted data.
 	
 	
 	
@@ -120,7 +122,7 @@ With the exception of `00_run_all.R`, all files create tex files in the numbers/
 	
 - **`08_all_preds.R`**
 	
-  This file reads data/intermediate_files/folds.RDS and 14 RDS files from data/intermediate_files/preds_cv. If preds_holdout == TRUE, it will also read data/PreFer_holdout_data.csv, data/PreFer_holdout_outcome.csv, data/PreFer_train_outcome.csv, 9 RDS files from data/intermediate_files/cleaned_dfs (the 9 not read by training.R), and 14 RDS files from data/intermediate_files/models
+  This file reads data/intermediate_files/folds.RDS and 14 RDS files from data/intermediate_files/preds_cv. If preds_holdout == TRUE, it will also read data/PreFer_holdout_data.csv, data/PreFer_holdout_outcome.csv, data/PreFer_train_outcome.csv, 9 RDS files from data/intermediate_files/cleaned_dfs (the 9 not read by training.R), and 14 RDS files from data/intermediate_files/models.
 	
   This file creates data/intermediate_files/preds.RDS, which contains all predictions by all models, as well training set means and outcomes.
 	
@@ -128,15 +130,15 @@ With the exception of `00_run_all.R`, all files create tex files in the numbers/
 	
 - **`09_metrics.R`**
 	
-  This file establishes several custom made performance metric functions in the tidymodels style
+  This file establishes several custom made performance metric functions in the tidymodels style.
 	
 	
 	
 - **`10_eval.R`**
 	
-  This file reads data/intermediate_files/preds.RDS
+  This file reads data/intermediate_files/preds.RDS.
 	
-  This file creates 5 png files in the figures folder and 8 tex files in the tables folder to illustrate model performance or improvements inperformance.
+  This file creates 5 jpg files in the figures folder and 8 tex files in the tables folder to illustrate model performance or improvements inperformance.
 	
   This file creates 18 tex files in numbers/section5_1 and 12 tex files in numbers/section5_3, representing the performance measures mentioned in those sections
   
@@ -184,7 +186,7 @@ We have successfully reproduced the results for cross-validated performance usin
 
 **Please follow these steps to reproduce our results:**
 
-1. Clone the `special_issue_paper` branch of this repository to your local machine. If you prefer to download a ZIP file instead of cloning, be sure to download the `special_issue_paper` branch.
+1. Clone the this repository to your local machine.
 
 2. Download all necessary data files to fertility-prediction-challenge-2024/data/ as described above.
 

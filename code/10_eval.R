@@ -55,9 +55,19 @@ results <- 0:2000 %>%
     )
   ))
 
+# This function implements rounding half up rule
+round_half_up <- function(x, n = 0) {
+  posneg = sign(x)
+  output <- abs(x) * 10 ^ n
+  output = output + 0.5 + sqrt(.Machine$double.eps)
+  output = trunc(output)
+  output = output / 10 ^ n
+  output * posneg
+}
+
 # This function rounds raw numbers
 clean_num <- function(x) {
-  sub("0\\.", ".", format(round(x, 3), nsmall = 3))
+  sub("0\\.", ".", format(round_half_up(x, 3), nsmall = 3))
 }
 
 # Given bootstrap results, this function summarizes the estimated performance 
@@ -90,25 +100,25 @@ results_summary <- get_summary_data(results)
 # This function make things look pretty",
 theme_tommy <- function() {
   theme_foundation() +
-  theme(
-    text = element_text(family = "Helvetica"),
-    panel.background = element_rect(color = NA),
-    plot.background = element_rect(color = NA),
-    plot.title = element_text(hjust = 0.5),
-    panel.border = element_rect(color = NA),
-    panel.grid.major = element_line(color="#f0f0f0"),
-    panel.grid.minor = element_blank(),
-    axis.line = element_line(colour="black"),
-    legend.key =element_rect(color = NA),
-    strip.background=element_rect(color= NA)
-  )
+    theme(
+      text = element_text(family = "Helvetica"),
+      panel.background = element_rect(color = NA),
+      plot.background = element_rect(color = NA),
+      plot.title = element_text(hjust = 0.5),
+      panel.border = element_rect(color = NA),
+      panel.grid.major = element_line(color = "#f0f0f0"),
+      panel.grid.minor = element_blank(),
+      axis.line = element_line(colour = "black"),
+      legend.key = element_rect(color = NA),
+      strip.background = element_rect(color = NA)
+    )
 }
 
 # Determine x-axis label based on whether we are using CV and/or holdout preds
 if (preds_cv) {
   if (preds_holdout) {
-    x <- bquote(italic(R)[CV-Holdout]^2)
-    r2_table <- "$R^2_\\text{CV-Holdout}$"
+    x <- bquote(italic(R)[CV*", "*Holdout]^2)
+    r2_table <- "$R^2_\\text{CV, Holdout}$"
   } else {
     x <- bquote(italic(R)[CV]^2)
     r2_table <- "$R^2_\\text{CV}$"
@@ -118,22 +128,19 @@ if (preds_cv) {
   r2_table <- "$R^2_\\text{Holdout}$"
 }
 
-# This function saves a ggplot image as both a png file and a tiff file
-double_save <- function(plot, fig_num) {
+# Make histograms of missingness rates
+# This function saves a ggplot image as a jpg file
+save_jpg <- function(plot, fig_num) {
   "Figures/Fig" %>%
     paste0(fig_num) %>%
-    paste0(".png") %>%
-    ggsave(plot = plot, width = 7, height = 5, dpi = 1200)
-  "Figures/Fig" %>%
-    paste0(fig_num) %>%
-    paste0(".tiff") %>%
+    paste0(".jpg") %>%
     ggsave(plot = plot, width = 7, height = 5, dpi = 1200)
 }
 
 # This function plots the distributions of a bootstrapped metric (R2-holdout)
 # with for multiple models
 make_plot <- function(results, results_summary,
-                      these_names, labels, fig_num) {
+                      these_names, labels, x, fig_num) {
   filtered_results <- results %>%
     filter(name %in% these_names, .metric == "rsq_holdout") %>%
     mutate(name = factor(name, levels = these_names)) %>%
@@ -160,21 +167,23 @@ make_plot <- function(results, results_summary,
     ) +
     labs(x = x, y = "") +
     theme_tommy()
-  double_save(plot, fig_num)
+  save_jpg(plot, fig_num)
 }
+dir.create("figures")
 figure5 <- make_plot(
   results, results_summary,
   c("final", "time_shift", "partner", "original"),
   c("Partner +\nTime Shift", "Time Shift", "Partner", "Original"),
+  x,
   5
 )
-dir.create("figures")
 figure7 <- make_plot(
   results, results_summary,
   c("glm_seven_final", "glm_seven_time_shift",
     "glm_seven_partner", "glm_seven_original"
   ),
   c("Partner +\nTime Shift", "Time Shift", "Partner", "Original"),
+  x,
   7
 )
 figure8 <- make_plot(
@@ -183,6 +192,7 @@ figure8 <- make_plot(
     "glm_full_partner", "glm_full_original"
   ),
   c("Partner +\nTime Shift", "Time Shift", "Partner", "Original"),
+  x,
   8
 )
 figure9 <- make_plot(
@@ -191,6 +201,7 @@ figure9 <- make_plot(
   c("Fertility\nIntentions", "No Partner +\nNo Time Shift",
     "No Tuning", "Final Model"
   ),
+  x,
   9
 )
 
@@ -213,12 +224,18 @@ contrasts_results <- tibble(
   name1 = "original",
   name2 = c("partner", "time_shift", "final")
 ) %>%
-  rbind(tibble(name1 = "glm_full_original",
-               name2 = c("glm_full_partner", "glm_full_time_shift", "glm_full_final"))) %>%
-  rbind(tibble(name1 = "glm_seven_original",
-               name2 = c("glm_seven_partner", "glm_seven_time_shift", "glm_seven_final"))) %>%
-  rbind(tibble(name1 = "final",
-               name2 = c("no_tuning", "original", "three_features"))) %>%
+  rbind(tibble(
+    name1 = "glm_full_original",
+    name2 = c("glm_full_partner", "glm_full_time_shift", "glm_full_final")
+  )) %>%
+  rbind(tibble(
+    name1 = "glm_seven_original",
+    name2 = c("glm_seven_partner", "glm_seven_time_shift", "glm_seven_final")
+  )) %>%
+  rbind(tibble(
+    name1 = "final",
+    name2 = c("no_tuning", "original", "three_features")
+  )) %>%
   pmap(~ get_contrast(.x, .y, results)) %>%
   list_rbind()
 contrasts_results_summary <- get_summary_data(contrasts_results)
@@ -259,7 +276,7 @@ figure6 <- ggplot(mapping = aes(y = name)) +
   ) +
   labs(x = x, y = "") +
   theme_tommy()
-double_save(figure6, 6)
+save_jpg(figure6, 6)
 
 # This function selects numbers of type ".estimate", "lo", or "hi" from
 # filtered_results_summary
@@ -286,7 +303,7 @@ get_table_data <- function(results_summary, these_names) {
     ) %>%
     arrange(.metric, name) %>%
     pivot_wider(
-      names_from = name, 
+      names_from = name,
       values_from = c(.estimate, cleaned_estimate, lo, hi)
     )
   estimate <- get_num_of_type(filtered_results_summary, ".estimate")
@@ -365,28 +382,39 @@ table_data_b8 <- contrasts_results_summary %>%
   )
 table_data_b8[["estimate"]][[
   "cleaned_estimate_three_features__final"]][[1]] %>%
+  substr(2, 5) %>%
   write("numbers/section5_3/01_estimate_three_features__final.tex")
-table_data_b8[["lo"]][["lo_three_features__final"]][[1]] %>%
-  write("numbers/section5_3/02_lo_three_features__final.tex")
 table_data_b8[["hi"]][["hi_three_features__final"]][[1]] %>%
+  substr(2, 5) %>%
+  write("numbers/section5_3/02_lo_three_features__final.tex")
+table_data_b8[["lo"]][["lo_three_features__final"]][[1]] %>%
+  substr(2, 5) %>%
   write("numbers/section5_3/03_hi_three_features__final.tex")
 table_data_b8[["estimate"]][["cleaned_estimate_original__final"]][[1]] %>%
+  substr(2, 5) %>%
   write("numbers/section5_3/04_estimate_original__final.tex")
-table_data_b8[["lo"]][["lo_original__final"]][[1]] %>%
+table_data_b8[["hi"]][["hi_original__final"]][[1]] %>%
+  substr(2, 5) %>%
   write("numbers/section5_3/05_lo_original__final.tex")
-table_data_b8[["hi"]][["hi_original_final"]][[1]] %>%
+table_data_b8[["lo"]][["lo_original__final"]][[1]] %>%
+  substr(2, 5) %>%
   write("numbers/section5_3/06_hi_original__final.tex")
 table_data_b8[["estimate"]][["cleaned_estimate_no_tuning__final"]][[1]] %>%
+  substr(2, 5) %>%
   write("numbers/section5_3/07_estimate_no_tuning__final.tex")
-table_data_b8[["lo"]][["lo_no_tuning__final"]][[1]] %>%
-  write("numbers/section5_3/08_lo_no_tuning__final.tex")
 table_data_b8[["hi"]][["hi_no_tuning__final"]][[1]] %>%
+  substr(2, 5) %>%
+  write("numbers/section5_3/08_lo_no_tuning__final.tex")
+table_data_b8[["lo"]][["lo_no_tuning__final"]][[1]] %>%
+  substr(2, 5) %>%
   write("numbers/section5_3/09_hi_no_tuning__final.tex")
 table_data_b8[["estimate"]][["cleaned_estimate_original__final"]][[6]] %>%
+  substr(2, 5) %>%
   write("numbers/section5_3/10_estimate_original__final_f1.tex")
-table_data_b8[["lo"]][["lo_original__final"]][[6]] %>%
+table_data_b8[["hi"]][["hi_original__final"]][[6]] %>%
   write("numbers/section5_3/11_lo_original__final_f1.tex")
-table_data_b8[["hi"]][["hi_original_final"]][[6]] %>%
+table_data_b8[["lo"]][["lo_original__final"]][[6]] %>%
+  substr(2, 5) %>%
   write("numbers/section5_3/12_hi_original__final_f1.tex")
 
 # This function creates the latex tables in the appendix
@@ -404,7 +432,7 @@ make_table <- function(table_data, labels, caption) {
       "MSE", "F1", "Precision", "Recall", "Accuracy"
     )) %>%
     relocate(metric)
-
+  
   # Bold best model of each row
   for (row in 1:9) {
     if (!row %in% c(4, 5)) {
@@ -416,7 +444,7 @@ make_table <- function(table_data, labels, caption) {
       paste0("\\textbf{", output[row, 2 * best - 1], "}")
     output[row, 2 * best] <- paste0("\\textbf{", output[row, 2 * best], "}")
   }
-
+  
   # Tidy up the table
   ci_labels <- paste(labels, "\\\\ 95\\% CI")
   col.names <- labels %>%
@@ -435,52 +463,54 @@ make_table <- function(table_data, labels, caption) {
     ) %>%
     footnote(
       general = paste(
-        "Note: Best performance of each row in bold.",
-        "F1, precision, recall, and accuracy used $\\\\geq .5$ as threshold."
+        "Note: Best performance of each row in bold.\\\\\\\\",
+        "F1, precision, recall, and accuracy were computed by classifying",
+        "predicted probabilities of 0.5 or greater as positive."
       ),
       escape = FALSE,
       general_title = ""
     ) %>%
+    str_replace_all("-", "$-$") %>%
+    str_replace_all(stringr::fixed("rule{0pt}{1em}"), "makecell[l]{") %>%
+    str_replace_all("positive.", "positive.}") %>%
     str_replace_all("table", "sidewaystable")
 }
 dir.create("tables")
 table_data_b1 %>%
   make_table(
     c("Original", "Partner", "Time shift", "Partner + \\\\ time shift"),
-    "Performance of tuned XGBoost models"
+    "Performance of Tuned XGBoost Models"
   ) %>%
   write("tables/table_b1.tex")
 table_data_b3 <- results_summary %>%
   get_table_data(c("glm_seven_original", "glm_seven_partner",
     "glm_seven_time_shift", "glm_seven_final"
-  )
-)
+  ))
 table_data_b3 %>%
   make_table(
     c("Original", "Partner", "Time shift", "Partner + \\\\ time shift"),
-    "Performance of logistic regression models on seven baseline features"
+    "Performance of Logistic Regression Models on Seven Baseline Features"
   ) %>%
   write("tables/table_b3.tex")
 table_data_b5 <- results_summary %>%
   get_table_data(c("glm_full_original", "glm_full_partner",
     "glm_full_time_shift", "glm_full_final"
-  )
-)
+  ))
 table_data_b5 %>%
   make_table(
     c("Original", "Partner", "Time shift", "Partner + \\\\ time shift"),
-    paste("Performance of logistic regression models",
-      "on all features in winning model"
+    paste("Performance of Logistic Regression Models",
+      "on All Features in Winning Model"
     )
   ) %>%
   write("tables/table_b5.tex")
 table_data_b7 <- results_summary %>%
   get_table_data(c("final", "no_tuning", "original", "three_features"))
 table_data_b7 %>%
-  make_table(c("Final model", "No tuning", 
+  make_table(c("Final model", "No tuning",
       "No partner + \\\\ no time shift", "Fertility \\\\ intentions"
     ),
-    "Performance of final and less engineered XGBoost models"
+    "Performance of Final and Less Engineered XGBoost Models"
   ) %>%
   write("tables/table_b7.tex")
 
@@ -489,8 +519,8 @@ table_data_b2 %>%
   make_table(
     c("Partner", "Time shift", "Partner + \\\\ time shift"),
     paste(
-      "Performance of engineered data \\textbf{relative to original data},",
-      "tuned XGBoost models"
+      "Performance of Engineered Data \\textbf{Relative to Original Data},",
+      "Tuned XGBoost Models"
     )
   ) %>%
   write("tables/table_b2.tex")
@@ -498,13 +528,12 @@ table_data_b4 <- contrasts_results_summary %>%
   get_table_data(c("glm_seven_partner__glm_seven_original",
     "glm_seven_time_shift__glm_seven_original",
     "glm_seven_final__glm_seven_original"
-  )
-)
+  ))
 table_data_b4 %>%
   make_table(
     c("Partner", "Time shift", "Partner + \\\\ time shift"),
-    paste("Performance of engineered data relative to original data,",
-      "logistic regression models on seven baseline features"
+    paste("Performance of Engineered Data Relative to Original Data,",
+      "Logistic Regression Models on Seven Baseline Features"
     )
   ) %>%
   write("tables/table_b4.tex")
@@ -512,14 +541,13 @@ table_data_b6 <- contrasts_results_summary %>%
   get_table_data(c("glm_full_partner__glm_full_original",
     "glm_full_time_shift__glm_full_original",
     "glm_full_final__glm_full_original"
-  )
-)
+  ))
 table_data_b6 %>%
   make_table(
     c("Partner", "Time shift", "Partner + \\\\ time shift"),
     paste(
-      "Performance of engineered data \\textbf{relative to original data},",
-      "logistic regression models on all features in winning model"
+      "Performance of Engineered Data \\textbf{Relative to Original Data},",
+      "Logistic Regression Models on All Features in Winning Model"
     )
   ) %>%
   write("tables/table_b6.tex")
@@ -529,8 +557,8 @@ table_data_b8 %>%
       "No partner + \\\\ no time shift",
       "Fertility \\\\ intentions"
     ),
-    paste("Performance of less engineered XGBoost models",
-      "\\textbf{relative to final model}"
+    paste("Performance of Less Engineered XGBoost Models",
+      "\\textbf{Relative to Final Model}"
     )
   ) %>%
   write("tables/table_b8.tex")

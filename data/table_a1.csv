@@ -1,12 +1,12 @@
-﻿,Variable Name,Description,Source
+,Variable Name,Description,Source
 1,birthyear_bg,"Birth year, based on gebjaar in the LISS Archive",Focal person data
-2,partner_birth_year20,"Presumed birthyear of 2020 partner, constructed using partner’s birthyear_bg and coalescing cf[08a-20m]026",Focal person data and partner data
-3,partner_birth_year19,"Presumed birthyear of 2019 partner, coalescing cf[08a-19l]026",Focal person data
-4,partner_birth_year18,"Presumed birthyear of 2018 partner, coalescing cf[08a-18k]026",Focal person data
+2,partner_birth_year20,"Presumed birthyear of 2020 partner, constructed using partner’s birthyear_bg and coalescing cf[08a--20m]026",Focal person data and partner data
+3,partner_birth_year19,"Presumed birthyear of 2019 partner, coalescing cf[08a--19l]026",Focal person data
+4,partner_birth_year18,"Presumed birthyear of 2018 partner, coalescing cf[08a--18k]026",Focal person data
 5,gender_bg,"Gender, based on geslacht in the LISS Archive",Focal person data
 6,belbezig_2020,"Primary occupation (example values: paid employment, takes care of the housekeeping), based on belbezig in the LISS Archive",Focal person data
 7,hhinc_per_capita20,"Household income per capita, constructed based on household income nettohh_f and household size aantalhh in the LISS Archive. ",Focal person data
-8,migration_background_bg,"Migration background (example values: western immigrant, non-western immigrant), based on herkomstgroep in the LISS Archive",Focal person data
+8,migration_background_bg,"Migration background (example values: western immigrant, nonwestern immigrant), based on herkomstgroep in the LISS Archive",Focal person data
 9,nettohh_f_2020,"Household net monthly income, based on nettoink_f of household members.",Focal person data
 10,nettoink_f_2020,"Personal net monthly income, based on nettoink_f in the LISS Archive, involves values imputed by LISS ",Focal person data
 11,oplmet_2020,"Highest level of education with diploma, based on oplmet in the LISS Archive",Focal person data
@@ -61,25 +61,25 @@
 60,cf19l455_PartnerSurvey,Partner’s number of living children in 2019,Partner data
 61,cf20m456,Birth year of first child,Focal person data
 62,cf20m456_PartnerSurvey,Birth year of partner’s first child,Partner data
-63,year_relationship_began20,Coalescing cf[08a-20m]028,Focal person data
-64,year_relationship_began19,Coalescing cf[08a-19l]028,Focal person data
-65,year_relationship_began18,Coalescing cf[08a-18k]028,Focal person data
-66,most_recent_child20,Coalescing birth years from cf20m[456-470],Focal person data
-67,most_recent_child19,Coalescing birth years from cf19l[456-470],Focal person data
-68,most_recent_child18,Coalescing birth years from cf18l[456-470],Focal person data
-69,most_recent_child20_PartnerSurvey,Coalescing birth years from cf20m[456-470] for partner,Partner data
-70,most_recent_child19_PartnerSurvey,Coalescing birth years from cf19l[456-470] for partner,Partner data
-71,child_feeling,Warm feelings toward one’s children on a 7-point scale based on cf20m[513-521]. Example item: I am very fond of my [son/daughter].,Focal person data
+63,year_relationship_began20,Coalescing cf[08a--20m]028,Focal person data
+64,year_relationship_began19,Coalescing cf[08a--19l]028,Focal person data
+65,year_relationship_began18,Coalescing cf[08a--18k]028,Focal person data
+66,most_recent_child20,Coalescing birth years from cf20m[456--470],Focal person data
+67,most_recent_child19,Coalescing birth years from cf19l[456--470],Focal person data
+68,most_recent_child18,Coalescing birth years from cf18l[456--470],Focal person data
+69,most_recent_child20_PartnerSurvey,Coalescing birth years from cf20m[456--470] for partner,Partner data
+70,most_recent_child19_PartnerSurvey,Coalescing birth years from cf19l[456--470] for partner,Partner data
+71,child_feeling,Warm feelings toward one’s oldest child on a 7-point scale based on cf20m[513-521]. Example item: I am very fond of my [son/daughter].,Focal person data
 72,ch20m004,Self health description on a five-point scale.,Focal person data
 73,ch20m219,Had contact with gynecologist over the last 12 months,Focal person data
 74,ch20m219_PartnerSurvey,Partner had contact with gynecologist over the last 12 months,Partner data
 75,cr20m162,Religiosity on a 4-point scale,Focal person data
-76,gendered_religiosity,"Measured in 2018, a 3-point scale based on cr18k[101-105]. Example item: Does a wife have to do what her husband asks of her?",Focal person data
-77,traditional_motherhood,"Level of belief in traditional views on motherhood, a 5-point scale based on cv20l[109-111]. Example item: A working mother’s relationship with her children can be just as close and warm as that of a non-working mother",Focal person data
-78,traditional_fatherhood,"Level of belief in traditional views on motherhood, a 5-point scale based on cv20l[112-115]. Example item: Both father and mother should contribute to the family income.",Focal person data
-79,traditional_marriage,"Level of belief in traditional views on marriage, a 5-point scale based on cv20m[124-130]. Example item: Married people are generally happier than unmarried people.",Focal person data
-80,traditional_fertility,Level of beliefs in traditional views on fertility. A 5-point scale based on cv10c[135-138]. Measured in 2010. Example item: Your life is not complete if you haven’t had children.,Focal person data
-81,working_mother,"Level of approval towards mothers working on a 3-point scale, based on cv20l[143-146]. Example item: Do you think that women, under the circumstances described below, should be able to have a full-time job, a part-time job, or no job at all? If she has a baby (a child younger than 1 year).",Focal person data
-82,sexism,"Level of sexist beliefs, a 5-point scale based on cv20l[151-154]. Example item: A woman is more suited to rearing young children than a man.",Focal person data
+76,gendered_religiosity,"Measured in 2018, a 3-point scale based on cr18k[101--105]. Example item: Does a wife have to do what her husband asks of her?",Focal person data
+77,traditional_motherhood,"Level of belief in traditional views on motherhood, a 5-point scale based on cv20l[109--111]. Example item: A working mother’s relationship with her children can be just as close and warm as that of a non-working mother",Focal person data
+78,traditional_fatherhood,"Level of belief in traditional views on motherhood, a 5-point scale based on cv20l[112--115]. Example item: Both father and mother should contribute to the family income.",Focal person data
+79,traditional_marriage,"Level of belief in traditional views on marriage, a 5-point scale based on cv20m[124--130]. Example item: Married people are generally happier than unmarried people.",Focal person data
+80,traditional_fertility,Level of beliefs in traditional views on fertility. A 5-point scale based on cv10c[135--138]. Measured in 2010. Example item: Your life is not complete if you haven’t had children.,Focal person data
+81,working_mother,"Level of approval towards mothers working on a 3-point scale, based on cv20l[143--146]. Example item: Do you think that women, under the circumstances described below, should be able to have a full-time job, a part-time job, or no job at all? If she has a baby (a child younger than 1 year).",Focal person data
+82,sexism,"Level of sexist beliefs, a 5-point scale based on cv20l[151--154]. Example item: A woman is more suited to rearing young children than a man.",Focal person data
 83,time_shifted_data,Indicator variable of time shift data augmentation,
 84,partner_survey_available,Indicator variable of partner linkage,

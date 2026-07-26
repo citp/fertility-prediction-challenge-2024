@@ -94,18 +94,19 @@ table1 %>%
   kable("latex",
         col.names = c(
           "\\textbf{Data source}",
-          "\\textbf{\\shortstack[l]{Outcome = 0\\\\(no new child)}}",
-          "\\textbf{\\shortstack[l]{Outcome = 1\\\\(new child)}}",
+          "\\textbf{\\shortstack[c]{Outcome = 0\\\\(no new child)}}",
+          "\\textbf{\\shortstack[c]{Outcome = 1\\\\(new child)}}",
           "\\textit{\\textbf{n}}"
         ),
         align = "lcccc",
         caption = paste0(
-          "Distribution of outcomes in original and time-shifted data}",
+          "Distribution of Outcomes in Original and Time-Shifted Data}",
           "\\label{table1:distribution_of_outcomes"
         ),
         escape = FALSE,
         booktabs = TRUE
   ) %>%
+  kable_styling(latex_options = "hold_position") %>%
   write("tables/table1.tex")
 
 # The two numbers mentioned in Section 2.2 illustrating how sample size
@@ -141,11 +142,21 @@ if(preds_holdout) {
 fertility_2018to2020 <- n_train_2018to2020_1 / n_train_2018to2020
 fertility_2021to2023 <- n_train_2021to2023_1 / n_train_2021to2023
 dir.create("numbers/section2_3")
+
+# This function implements rounding half up rule
+round_half_up <- function(x, n = 0) {
+  posneg = sign(x)
+  output <- abs(x) * 10 ^ n
+  output = output + 0.5 + sqrt(.Machine$double.eps)
+  output = trunc(output)
+  output = output / 10 ^ n
+  output * posneg
+}
 (fertility_2018to2020 * 100) %>%
-  round() %>%
+  round_half_up() %>%
   write("numbers/section2_3/04_fertility_2018to2020.tex")
 (fertility_2021to2023 * 100) %>%
-  round() %>%
+  round_half_up() %>%
   write("numbers/section2_3/05_fertility_2021to2023.tex")
 Sys.time() %>%
   difftime(start, units = "mins") %>%
