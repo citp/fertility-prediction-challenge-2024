@@ -120,9 +120,7 @@ clean_df <- function(df, background_df, feature_set, partner, time_shift) {
           # Gynecologist
           "ch20m219",
           # Birthyear
-          "birthyear_bg",
-          # Personal Income
-          "nettoink_f_2020"
+          "birthyear_bg"
         )
       } else {
         features_to_use_as_partner_data_in_model <- c(

@@ -30,7 +30,7 @@ features_2018to2020 <-
   read.csv()
 
 # Count the number of observations for Figure 2, distinguishing between
-# observations from the two periods as well as three types of time-shfited
+# observations from the two periods as well as three types of time-shifted
 # data
 n_train_2021to2023 <- nrow(outcome_2021to2023)
 n_train_2018to2020 <- nrow(outcome_2018to2020)

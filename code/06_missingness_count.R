@@ -68,7 +68,7 @@ dfs <- list(
   negative_2018to2020 = negative_2018to2020
 )
 
-# This fuction gets the missing rate for each variable in the dataset
+# This function gets the missing rate for each variable in the dataset
 get_missing_rate <- function(df, dfs) {
   output <- dfs[[df]] %>%
     modify(is.na) %>%
