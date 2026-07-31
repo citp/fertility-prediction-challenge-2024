@@ -66,7 +66,7 @@
 65,year_relationship_began18,Coalescing cf[08a--18k]028,Focal person data
 66,most_recent_child20,Coalescing birth years from cf20m[456--470],Focal person data
 67,most_recent_child19,Coalescing birth years from cf19l[456--470],Focal person data
-68,most_recent_child18,Coalescing birth years from cf18l[456--470],Focal person data
+68,most_recent_child18,Coalescing birth years from cf18k[456--470],Focal person data
 69,most_recent_child20_PartnerSurvey,Coalescing birth years from cf20m[456--470] for partner,Partner data
 70,most_recent_child19_PartnerSurvey,Coalescing birth years from cf19l[456--470] for partner,Partner data
 71,child_feeling,Warm feelings toward one’s oldest child on a 7-point scale based on cf20m[513-521]. Example item: I am very fond of my [son/daughter].,Focal person data

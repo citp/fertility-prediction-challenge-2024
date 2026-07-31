@@ -161,3 +161,33 @@ round_half_up <- function(x, n = 0) {
 Sys.time() %>%
   difftime(start, units = "mins") %>%
   write("numbers/timing/05_observation_count.tex")
+
+# Count the percentage of partnered individuals and the percentage of
+# partnered individuals with a partner survey available
+train_2021to2023 <- "data/intermediate_files/" %>%
+  paste0("cleaned_dfs/cleaned_train_2021to2023_full_features_final.RDS") %>%
+  readRDS()
+train_2018to2020 <- "data/intermediate_files/" %>%
+  paste0("cleaned_dfs/cleaned_train_2018to2020_full_features_final.RDS") %>%
+  readRDS()
+train_2018to2023 <- bind_rows(train_2021to2023, train_2018to2020)
+dir.create("numbers/section3_2")
+(sum(train_2018to2023$cf20m024 == 1, na.rm = TRUE) /
+  sum(!is.na(train_2018to2023$cf20m024)) *
+  100) %>%
+  round_half_up() %>%
+  write("numbers/section3_2/01_partnered.tex")
+(sum(train_2018to2023$partner_survey_available == 1 &
+  train_2018to2023$cf20m024 == 1, na.rm = TRUE) /
+  sum(train_2018to2023$cf20m024 == 1, na.rm = TRUE) *
+  100) %>%
+  round_half_up() %>%
+  write("numbers/section3_2/02_partner_survey_available.tex")
+(sum(train_2018to2020$partner_survey_available == 1 &
+       train_2018to2020$cf20m024 == 1, na.rm = TRUE) /
+    sum(train_2018to2020$cf20m024 == 1, na.rm = TRUE) *
+    100) 
+(sum(train_2021to2023$partner_survey_available == 1 &
+       train_2021to2023$cf20m024 == 1, na.rm = TRUE) /
+    sum(train_2021to2023$cf20m024 == 1, na.rm = TRUE) *
+    100) 

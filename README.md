@@ -95,6 +95,8 @@ With the exception of `00_run_all.R`, all files create tex files in the numbers/
   This file creates up to two tex files in numbers/section4_7_1. The files contains the two numbers mentioned in that section, counting the number of individuals in the original training and holdout sets. The latter number is generated only if preds_holdout == TRUE.
 	
   This file always creates two tex files in numbers/section2_3. The files contain the fourth and fifth numbers in that section. The numbers are the percentage of participant new children in the two time periods.
+  
+  This file always creates two tex files in numbers/section3_2. The files contain the two percentages in that section. The numbers are the percentage of partnered people and the percentage of partnered people who have partner data available.
 	
 	
 	
